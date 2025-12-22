@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "about": "About",
+    "experiences": "Experiences",
+    "contact": "Contact"
+  },
+  "hero": {
+    "titleTop": "Front-end",
+    "titleBottom": "developer",
+    "leftBottomTitle": "Service<br/>Experience<br/>Design",
+    "leftBottomDescription": "Building intuitive and performant web applications with modern technologies. Focused on creating seamless user experiences through clean code and thoughtful design.",
+    "name": "Kim<br/>cheong a",
+    "scrollDown": "Scroll down",
+    "exploreWork": "Explore my work"
+  },
+  "about": {
+    "text": "I'm a front-end developer<br/>with a deep understanding of the entire service.<br/><br/>With experience in both<br/>front-end and back-end,<br/>I build user-facing interfaces<br/>and operational tools<br/>together."
+  },
+  "projects": {
+    "title": "Featured Projects",
+    "items": [
+      {
+        "title": "E-Commerce Platform",
+        "description": "A modern e-commerce solution with real-time inventory management and seamless checkout experience.",
+        "tech": ["React", "Node.js", "MongoDB", "Stripe"]
+      },
+      {
+        "title": "Analytics Dashboard",
+        "description": "Real-time data visualization dashboard with interactive charts and comprehensive reporting features.",
+        "tech": ["Next.js", "TypeScript", "D3.js", "PostgreSQL"]
+      },
+      {
+        "title": "Mobile Banking App",
+        "description": "Secure mobile banking application with biometric authentication and instant transaction capabilities.",
+        "tech": ["React Native", "Firebase", "Redux", "AWS"]
+      },
+      {
+        "title": "AI Content Generator",
+        "description": "Machine learning-powered content generation platform with natural language processing capabilities.",
+        "tech": ["Python", "OpenAI", "FastAPI", "Docker"]
+      }
+    ]
+  },
+  "contact": {
+    "title": "Let's Connect",
+    "subtitle": "Have a project in mind?<br/>Let's discuss how we can work together to bring your ideas to life.",
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "emailPlaceholder": "your.email@example.com",
+      "subject": "Subject",
+      "subjectPlaceholder": "What's this about?",
+      "message": "Message",
+      "messagePlaceholder": "Tell me about your project...",
+      "send": "Send Message",
+      "sending": "Sending...",
+      "success": "Opening your email client...",
+      "error": "Something went wrong. Please try again."
+    },
+    "info": [
+      {
+        "label": "Email",
+        "value": "kimcheonga97@gmail.com"
+      },
+      {
+        "label": "Location",
+        "value": "Seoul, South Korea"
+      }
+    ],
+    "social": [
+      {
+        "name": "GitHub",
+        "url": "https://github.com/cheongAA"
+      },
+      {
+        "name": "Instagram",
+        "url": "https://instagram.com/kimcheongaa"
+      }
+    ],
+    "copyright": "All rights reserved."
+  }
+}

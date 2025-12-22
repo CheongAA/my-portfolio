@@ -1,13 +1,21 @@
-import { Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
+
+import HeroSection from "../components/home/HeroSection";
+import AboutSection from "../components/home/AboutSection";
+import ProjectsSection from "../components/home/ProjectsSection";
+import ContactSection from "../components/home/ContactSection";
 
 export default function HomePage() {
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Home</h1>
-      <p>포트폴리오 홈</p>
-      <nav style={{ display: "flex", gap: 12 }}>
-        <Link to="/projects">Projects</Link>
-      </nav>
+    <div className="relative bg-background text-foreground overflow-hidden flex flex-col gap-50">
+      <header className="fixed w-full z-30 flex justify-center items-center pt-4 backdrop-blur">
+        <Navbar />
+      </header>
+
+      <HeroSection />
+      <AboutSection />
+      <ProjectsSection />
+      <ContactSection />
     </div>
   );
 }
