@@ -1,0 +1,83 @@
+{
+  "nav": {
+    "about": "소개",
+    "experiences": "경험",
+    "contact": "연락하기"
+  },
+  "hero": {
+    "titleTop": "프론트엔드",
+    "titleBottom": "개발자",
+    "leftBottomTitle": "서비스<br/>경험<br/>설계",
+    "leftBottomDescription": "최신 기술로 직관적이고 성능 좋은 웹 애플리케이션을 구축합니다.<br/>깨끗한 코드와 신중한 디자인을 통해 매끄러운 사용자 경험을 만드는 데 집중합니다.",
+    "name": "김청아",
+    "scrollDown": "스크롤 다운",
+    "exploreWork": "작업 둘러보기"
+  },
+  "about": {
+    "text": "서비스 전반을 이해하는<br/>프론트엔드 개발자입니다.<br/><br/>프론트엔드와 백엔드를 모두 경험하며<br/>사용자 화면과 운영 도구를<br/>함께 만들어왔습니다."
+  },
+  "projects": {
+    "title": "주요 프로젝트",
+    "items": [
+      {
+        "title": "이커머스 플랫폼",
+        "description": "실시간 재고 관리와 원활한 결제 경험을 제공하는 현대적인 이커머스 솔루션입니다.",
+        "tech": ["React", "Node.js", "MongoDB", "Stripe"]
+      },
+      {
+        "title": "분석 대시보드",
+        "description": "인터랙티브 차트와 포괄적인 리포팅 기능을 갖춘 실시간 데이터 시각화 대시보드입니다.",
+        "tech": ["Next.js", "TypeScript", "D3.js", "PostgreSQL"]
+      },
+      {
+        "title": "모바일 뱅킹 앱",
+        "description": "생체 인증과 즉시 거래 기능을 갖춘 안전한 모바일 뱅킹 애플리케이션입니다.",
+        "tech": ["React Native", "Firebase", "Redux", "AWS"]
+      },
+      {
+        "title": "AI 콘텐츠 생성기",
+        "description": "자연어 처리 기능을 갖춘 머신러닝 기반 콘텐츠 생성 플랫폼입니다.",
+        "tech": ["Python", "OpenAI", "FastAPI", "Docker"]
+      }
+    ]
+  },
+  "contact": {
+    "title": "연락하기",
+    "subtitle": "프로젝트 아이디어가 있으신가요? 함께 고민하며 구현해볼 수 있습니다.",
+    "form": {
+      "name": "이름",
+      "namePlaceholder": "이름을 입력하세요",
+      "email": "이메일",
+      "emailPlaceholder": "your.email@example.com",
+      "subject": "제목",
+      "subjectPlaceholder": "무엇에 관한 것인가요?",
+      "message": "메시지",
+      "messagePlaceholder": "프로젝트에 대해 알려주세요...",
+      "send": "메시지 보내기",
+      "sending": "전송 중...",
+      "success": "이메일 클라이언트를 여는 중...",
+      "error": "문제가 발생했습니다. 다시 시도해주세요."
+    },
+    "info": [
+      {
+        "label": "이메일",
+        "value": "kimcheonga97@gmail.com"
+      },
+      {
+        "label": "위치",
+        "value": "서울, 대한민국"
+      }
+    ],
+    "social": [
+      {
+        "name": "GitHub",
+        "url": "https://github.com/cheongAA"
+      },
+      {
+        "name": "Instagram",
+        "url": "https://instagram.com/kimcheongaa"
+      }
+    ],
+    "copyright": "모든 권리 보유."
+  }
+}
