@@ -8,7 +8,7 @@ type NavLinkBaseProps = {
 type NavLinkAsAnchor = NavLinkBaseProps & {
   as?: "a";
   href: string;
-  onClick?: never;
+  onClick?: () => void;
 };
 
 type NavLinkAsButton = NavLinkBaseProps & {
@@ -35,6 +35,8 @@ const NavLink = ({
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const href = (props as NavLinkAsAnchor).href;
+    const onClick = (props as NavLinkAsAnchor).onClick;
+
     if (href?.startsWith("#")) {
       e.preventDefault();
       const element = document.querySelector(href);
@@ -42,6 +44,9 @@ const NavLink = ({
         element.scrollIntoView({ behavior: "smooth" });
       }
     }
+
+    // Call additional onClick if provided
+    onClick?.();
   };
 
   if (as === "button") {
