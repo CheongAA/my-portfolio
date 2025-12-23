@@ -100,7 +100,7 @@ export default function HeroSection() {
       <div className="fixed top-0 h-screen w-screen overflow-hidden z-0">
         {/* laptop screen video  */}
         <motion.video
-          className="absolute inset-0 pointer-events-none w-full h-full object-cover"
+          className="absolute inset-0 pointer-events-none w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-enclosure]:hidden"
           src={`${import.meta.env.BASE_URL}videos/coding.mp4`}
           style={{
             opacity: gifOpacity,
@@ -109,8 +109,12 @@ export default function HeroSection() {
               "contrast(1.18) saturate(1.08) brightness(0.92) hue-rotate(-10deg)",
             willChange: "transform, opacity, filter",
           }}
-          onCanPlay={() => {
+          onCanPlay={(e) => {
             console.log("Video loaded");
+            const video = e.currentTarget;
+            video.play().catch((error) => {
+              console.log("Autoplay failed:", error);
+            });
             setIsVideoLoaded(true);
           }}
           onError={() => {
@@ -121,6 +125,9 @@ export default function HeroSection() {
           loop
           muted
           playsInline
+          disablePictureInPicture
+          disableRemotePlayback
+          preload="auto"
         />
         <motion.div
           className="absolute inset-0 pointer-events-none"
