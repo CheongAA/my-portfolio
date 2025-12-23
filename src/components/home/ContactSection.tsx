@@ -16,7 +16,7 @@ export default function ContactSection() {
   }) as SocialLink[];
 
   return (
-    <section id="contact">
+    <section id="contact" className="relative z-10">
       <Container>
         {/* Contact Title */}
         <motion.div
@@ -48,7 +48,7 @@ export default function ContactSection() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`Visit my ${social.name} profile`}
-                  className="text-secondary hover:text-primary transition text-sm"
+                  className="relative z-20 text-secondary hover:text-primary transition text-sm cursor-pointer"
                 >
                   {social.name}
                 </a>
