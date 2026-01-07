@@ -9,6 +9,8 @@ export default function ProjectsSection() {
     title: string;
     description: string;
     tech: string[];
+    image: string;
+    link: string;
   }>;
 
   return (
@@ -40,6 +42,8 @@ export default function ProjectsSection() {
                 title={project.title}
                 description={project.description}
                 tech={project.tech}
+                image={project.image}
+                link={project.link}
               />
             </motion.div>
           ))}
