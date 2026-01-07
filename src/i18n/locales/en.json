@@ -20,24 +20,11 @@
     "title": "Featured Projects",
     "items": [
       {
-        "title": "E-Commerce Platform",
-        "description": "A modern e-commerce solution with real-time inventory management and seamless checkout experience.",
-        "tech": ["React", "Node.js", "MongoDB", "Stripe"]
-      },
-      {
-        "title": "Analytics Dashboard",
-        "description": "Real-time data visualization dashboard with interactive charts and comprehensive reporting features.",
-        "tech": ["Next.js", "TypeScript", "D3.js", "PostgreSQL"]
-      },
-      {
-        "title": "Mobile Banking App",
-        "description": "Secure mobile banking application with biometric authentication and instant transaction capabilities.",
-        "tech": ["React Native", "Firebase", "Redux", "AWS"]
-      },
-      {
-        "title": "AI Content Generator",
-        "description": "Machine learning-powered content generation platform with natural language processing capabilities.",
-        "tech": ["Python", "OpenAI", "FastAPI", "Docker"]
+        "title": "WoonSeDal",
+        "description": "Based on traditional Four Pillars analysis, this service interprets an individual’s innate traits and life flow. It helps users understand timing, direction, and shifts in fortune for informed life decisions.",
+        "tech": ["Next.js", "TypeScript", "Tailwind"],
+        "image": "/images/projects/woonsedal.webp",
+        "link": "https://saju-sage.vercel.app/"
       }
     ]
   },

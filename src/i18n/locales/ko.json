@@ -20,24 +20,11 @@
     "title": "주요 프로젝트",
     "items": [
       {
-        "title": "이커머스 플랫폼",
-        "description": "실시간 재고 관리와 원활한 결제 경험을 제공하는 현대적인 이커머스 솔루션입니다.",
-        "tech": ["React", "Node.js", "MongoDB", "Stripe"]
-      },
-      {
-        "title": "분석 대시보드",
-        "description": "인터랙티브 차트와 포괄적인 리포팅 기능을 갖춘 실시간 데이터 시각화 대시보드입니다.",
-        "tech": ["Next.js", "TypeScript", "D3.js", "PostgreSQL"]
-      },
-      {
-        "title": "모바일 뱅킹 앱",
-        "description": "생체 인증과 즉시 거래 기능을 갖춘 안전한 모바일 뱅킹 애플리케이션입니다.",
-        "tech": ["React Native", "Firebase", "Redux", "AWS"]
-      },
-      {
-        "title": "AI 콘텐츠 생성기",
-        "description": "자연어 처리 기능을 갖춘 머신러닝 기반 콘텐츠 생성 플랫폼입니다.",
-        "tech": ["Python", "OpenAI", "FastAPI", "Docker"]
+        "title": "운세달",
+        "description": "사주 정보를 기반으로 개인의 타고난 성향과 흐름을 분석해 삶의 방향, 선택의 시점, 운의 변화를 이해하도록 돕는 해석 서비스입니다.",
+        "tech": ["Next.js", "TypeScript", "Tailwind"],
+        "image": "/images/projects/woonsedal.webp",
+        "link": "https://saju-sage.vercel.app/"
       }
     ]
   },

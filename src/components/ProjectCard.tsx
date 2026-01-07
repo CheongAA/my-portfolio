@@ -4,27 +4,42 @@ interface ProjectCardProps {
   title: string;
   description: string;
   tech: string[];
+  image: string;
+  link: string;
 }
 
-export default function ProjectCard({ title, description, tech }: ProjectCardProps) {
+export default function ProjectCard({
+  title,
+  description,
+  tech,
+  image,
+  link,
+}: ProjectCardProps) {
   return (
-    <motion.div className="group relative h-full flex flex-col bg-card-bg rounded-2xl p-8 hover:bg-nav-hover transition-all duration-500 cursor-pointer border border-border hover:border-primary/20">
-      <h3 className="text-3xl font-medium text-primary mb-4 group-hover:text-primary/90 transition">
-        {title}
-      </h3>
-      <p className="text-secondary text-base leading-relaxed mb-6 grow">
-        {description}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {tech.map((item) => (
-          <span
-            key={item}
-            className="px-3 py-1 text-xs bg-nav-hover text-secondary rounded-full"
-          >
-            {item}
-          </span>
-        ))}
-      </div>
-    </motion.div>
+    <a href={link} target="_blank" rel="noopener noreferrer">
+      <motion.div className="group relative h-full flex flex-col bg-card-bg rounded-2xl p-8 hover:bg-nav-hover transition-all duration-500 cursor-pointer border border-border hover:border-primary/20">
+        {/* Image */}
+        <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl">
+          <img
+            src={`${import.meta.env.BASE_URL}${image}`}
+            alt={title}
+            className="object-cover"
+            sizes="(min-width: 768px) 50vw, 100vw"
+          />
+        </div>
+
+        {/* Content */}
+        <h3 className="mb-2 text-2xl font-medium">{title}</h3>
+        <p className="mb-4 text-muted-foreground">{description}</p>
+
+        <ul className="mt-auto flex flex-wrap gap-2">
+          {tech.map((item) => (
+            <li key={item} className="rounded-md bg-muted px-2 py-1 text-sm">
+              {item}
+            </li>
+          ))}
+        </ul>
+      </motion.div>
+    </a>
   );
 }
