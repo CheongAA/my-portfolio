@@ -1,22 +1,29 @@
-import { useTranslation } from "react-i18next";
+"use client";
+
+import { useLocale } from "next-intl";
+import { useRouter, usePathname } from "@/i18n/navigation";
 import NavLink from "./NavLink";
 
 type LanguageSwitcherProps = {
   onLanguageChange?: () => void;
 };
 
-export default function LanguageSwitcher({ onLanguageChange }: LanguageSwitcherProps) {
-  const { i18n } = useTranslation();
+export default function LanguageSwitcher({
+  onLanguageChange,
+}: LanguageSwitcherProps) {
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const toggleLanguage = () => {
-    const newLang = i18n.language === "en" ? "ko" : "en";
-    i18n.changeLanguage(newLang);
+    const newLocale = locale === "en" ? "ko" : "en";
+    router.replace(pathname, { locale: newLocale });
     onLanguageChange?.();
   };
 
   return (
     <NavLink as="button" onClick={toggleLanguage}>
-      {i18n.language === "en" ? "Ko" : "En"}
+      {locale === "en" ? "Ko" : "En"}
     </NavLink>
   );
 }

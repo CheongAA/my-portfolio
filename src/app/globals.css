@@ -6,14 +6,12 @@
   --color-text-primary: #fff;
   --color-text-secondary: #999;
   --color-border: #333;
-
   --color-card-bg: #111;
   --color-nav-hover: rgba(255, 255, 255, 0.1);
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
   overscroll-behavior: none;
   font-family: "GT America Extended Regular", "Pretendard Variable", Pretendard,
@@ -22,6 +20,17 @@ body,
 
 button {
   cursor: pointer;
+}
+
+/* HeroSection laptop background */
+.laptop-bg {
+  background-image: url("/my-portfolio/images/laptop_m.webp");
+}
+
+@media (min-width: 768px) {
+  .laptop-bg {
+    background-image: url("/my-portfolio/images/laptop.webp");
+  }
 }
 
 /* Reduce motion for users who prefer it */

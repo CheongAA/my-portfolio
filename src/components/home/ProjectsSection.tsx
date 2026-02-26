@@ -1,11 +1,13 @@
-import { useTranslation } from "react-i18next";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import Container from "../Container";
 import ProjectCard from "../ProjectCard";
 
 export default function ProjectsSection() {
-  const { t } = useTranslation();
-  const projects = t("projects.items", { returnObjects: true }) as Array<{
+  const t = useTranslations("projects");
+  const projects = t.raw("items") as Array<{
     title: string;
     description: string;
     tech: string[];
@@ -24,7 +26,7 @@ export default function ProjectsSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          {t("projects.title")}
+          {t("title")}
         </motion.h2>
 
         {/* Project Grid */}
