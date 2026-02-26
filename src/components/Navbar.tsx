@@ -1,21 +1,23 @@
+"use client";
+
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import Container from "./Container";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NavLink from "./NavLink";
 
 const Navbar = () => {
-  const { t } = useTranslation();
+  const t = useTranslations("nav");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <Container className="w-full flex items-center justify-end md:justify-between my-0">
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center gap-1">
-        <NavLink href="#about">{t("nav.about")}</NavLink>
-        <NavLink href="#experiences">{t("nav.experiences")}</NavLink>
-        <NavLink href="#contact">{t("nav.contact")}</NavLink>
+        <NavLink href="#about">{t("about")}</NavLink>
+        <NavLink href="#experiences">{t("experiences")}</NavLink>
+        <NavLink href="#contact">{t("contact")}</NavLink>
       </nav>
 
       {/* Desktop Language Switcher & Mobile Menu Button */}
@@ -67,13 +69,13 @@ const Navbar = () => {
           >
             <nav className="flex flex-col gap-4">
               <NavLink href="#about" onClick={() => setIsMenuOpen(false)}>
-                {t("nav.about")}
+                {t("about")}
               </NavLink>
               <NavLink href="#experiences" onClick={() => setIsMenuOpen(false)}>
-                {t("nav.experiences")}
+                {t("experiences")}
               </NavLink>
               <NavLink href="#contact" onClick={() => setIsMenuOpen(false)}>
-                {t("nav.contact")}
+                {t("contact")}
               </NavLink>
               <div className="mt-4 pt-4 border-t border-border">
                 <LanguageSwitcher

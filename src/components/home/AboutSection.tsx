@@ -1,5 +1,7 @@
+"use client";
+
 import React, { memo, useRef } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import Container from "../Container";
 
@@ -22,7 +24,7 @@ const Char = memo(function Char({
 });
 
 export default function AboutSection() {
-  const { t } = useTranslation();
+  const t = useTranslations("about");
   const ref = useRef<HTMLSpanElement>(null);
 
   const { scrollYProgress } = useScroll({
@@ -31,7 +33,7 @@ export default function AboutSection() {
   });
 
   // <br/> 태그를 실제 줄바꿈으로 변환하고, 각 문자를 배열로 만듦
-  const text = t("about.text");
+  const text = t("text");
   const parts = text.split("<br/>");
   const totalChars = text.replace(/<br\/>/g, "").length;
   const progress = useTransform(scrollYProgress, [0, 1], [0, totalChars]);

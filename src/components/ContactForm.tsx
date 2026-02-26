@@ -1,9 +1,11 @@
+"use client";
+
 import { useState, type FormEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 
 export default function ContactForm() {
-  const { t } = useTranslation();
+  const t = useTranslations("contact.form");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -56,7 +58,7 @@ export default function ContactForm() {
             htmlFor="name"
             className="block text-sm text-secondary uppercase tracking-wider mb-2"
           >
-            {t("contact.form.name")}
+            {t("name")}
           </label>
           <input
             type="text"
@@ -65,7 +67,7 @@ export default function ContactForm() {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className="w-full px-4 py-3 bg-transparent border border-border rounded-lg text-primary focus:outline-none focus:border-primary/50 transition"
-            placeholder={t("contact.form.namePlaceholder")}
+            placeholder={t("namePlaceholder")}
           />
         </div>
 
@@ -75,7 +77,7 @@ export default function ContactForm() {
             htmlFor="email"
             className="block text-sm text-secondary uppercase tracking-wider mb-2"
           >
-            {t("contact.form.email")}
+            {t("email")}
           </label>
           <input
             type="email"
@@ -86,7 +88,7 @@ export default function ContactForm() {
               setFormData({ ...formData, email: e.target.value })
             }
             className="w-full px-4 py-3 bg-transparent border border-border rounded-lg text-primary focus:outline-none focus:border-primary/50 transition"
-            placeholder={t("contact.form.emailPlaceholder")}
+            placeholder={t("emailPlaceholder")}
           />
         </div>
       </div>
@@ -97,7 +99,7 @@ export default function ContactForm() {
           htmlFor="subject"
           className="block text-sm text-secondary uppercase tracking-wider mb-2"
         >
-          {t("contact.form.subject")}
+          {t("subject")}
         </label>
         <input
           type="text"
@@ -108,7 +110,7 @@ export default function ContactForm() {
             setFormData({ ...formData, subject: e.target.value })
           }
           className="w-full px-4 py-3 bg-transparent border border-border rounded-lg text-primary focus:outline-none focus:border-primary/50 transition"
-          placeholder={t("contact.form.subjectPlaceholder")}
+          placeholder={t("subjectPlaceholder")}
         />
       </div>
 
@@ -118,7 +120,7 @@ export default function ContactForm() {
           htmlFor="message"
           className="block text-sm text-secondary uppercase tracking-wider mb-2"
         >
-          {t("contact.form.message")}
+          {t("message")}
         </label>
         <textarea
           id="message"
@@ -129,7 +131,7 @@ export default function ContactForm() {
             setFormData({ ...formData, message: e.target.value })
           }
           className="w-full px-4 py-3 bg-transparent border border-border rounded-lg text-primary focus:outline-none focus:border-primary/50 transition resize-none"
-          placeholder={t("contact.form.messagePlaceholder")}
+          placeholder={t("messagePlaceholder")}
         />
       </div>
 
@@ -142,7 +144,7 @@ export default function ContactForm() {
         >
           <span className="absolute inset-0 rounded-full bg-nav-hover opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100" />
           <span className="relative">
-            {isSubmitting ? t("contact.form.sending") : t("contact.form.send")}
+            {isSubmitting ? t("sending") : t("send")}
           </span>
         </button>
 
@@ -152,7 +154,7 @@ export default function ContactForm() {
             animate={{ opacity: 1, x: 0 }}
             className="text-sm text-primary"
           >
-            {t("contact.form.success")}
+            {t("success")}
           </motion.span>
         )}
 
@@ -162,7 +164,7 @@ export default function ContactForm() {
             animate={{ opacity: 1, x: 0 }}
             className="text-sm text-red-500"
           >
-            {t("contact.form.error")}
+            {t("error")}
           </motion.span>
         )}
       </div>

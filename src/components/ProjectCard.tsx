@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 
 interface ProjectCardProps {
@@ -21,7 +23,7 @@ export default function ProjectCard({
         {/* Image */}
         <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl">
           <img
-            src={`${import.meta.env.BASE_URL}${image}`}
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${image}`}
             alt={title}
             className="object-cover"
             sizes="(min-width: 768px) 50vw, 100vw"

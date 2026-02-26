@@ -1,13 +1,15 @@
-import { Trans as I18nTrans, type TransProps } from 'react-i18next';
+"use client";
 
-export default function Trans(props: TransProps<string>) {
+export default function Trans({ text }: { text: string }) {
+  const parts = text.split("<br/>");
   return (
-    <I18nTrans
-      {...props}
-      components={{
-        br: <br />,
-        ...props.components,
-      }}
-    />
+    <>
+      {parts.map((part, i) => (
+        <span key={i}>
+          {part}
+          {i < parts.length - 1 && <br />}
+        </span>
+      ))}
+    </>
   );
 }

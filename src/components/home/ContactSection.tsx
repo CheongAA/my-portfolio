@@ -1,4 +1,6 @@
-import { useTranslation } from "react-i18next";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import Container from "../Container";
 import ContactForm from "../ContactForm";
@@ -10,10 +12,8 @@ interface SocialLink {
 }
 
 export default function ContactSection() {
-  const { t } = useTranslation();
-  const socialLinks = t("contact.social", {
-    returnObjects: true,
-  }) as SocialLink[];
+  const t = useTranslations("contact");
+  const socialLinks = t.raw("social") as SocialLink[];
 
   return (
     <section id="contact" className="relative z-10">
@@ -27,10 +27,10 @@ export default function ContactSection() {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-5xl md:text-7xl font-medium tracking-tight text-primary mb-6">
-            {t("contact.title")}
+            {t("title")}
           </h2>
           <p className="text-xl text-secondary max-w-2xl">
-            <Trans i18nKey="contact.subtitle" />
+            <Trans text={t("subtitle")} />
           </p>
         </motion.div>
 
@@ -55,7 +55,7 @@ export default function ContactSection() {
               ))}
             </div>
             <div className="text-secondary text-sm">
-              © {new Date().getFullYear()} {t("contact.copyright")}
+              © {new Date().getFullYear()} {t("copyright")}
             </div>
           </div>
         </div>

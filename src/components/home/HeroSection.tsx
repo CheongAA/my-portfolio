@@ -1,30 +1,19 @@
-import { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+"use client";
+
+import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
   easeInOut,
   motion,
   useScroll,
   useTransform,
-  AnimatePresence,
 } from "framer-motion";
 import Container from "../Container";
 import Trans from "../Trans";
 
 export default function HeroSection() {
-  const { t } = useTranslation();
+  const t = useTranslations("hero");
   const mainRef = useRef<HTMLDivElement>(null);
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isImageMobileLoaded, setIsImageMobileLoaded] = useState(false);
-  const isLoading = !isVideoLoaded || !isImageLoaded || !isImageMobileLoaded;
-
-  // Calculate loading progress (0 to 100)
-  const loadingProgress =
-    (((isVideoLoaded ? 1 : 0) +
-      (isImageLoaded ? 1 : 0) +
-      (isImageMobileLoaded ? 1 : 0)) /
-      3) *
-    100;
 
   const { scrollYProgress } = useScroll({
     target: mainRef,
@@ -71,37 +60,12 @@ export default function HeroSection() {
 
   return (
     <section ref={mainRef} className="relative h-[200vh] w-full">
-      {/* Loading Spinner */}
-      <AnimatePresence>
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background"
-          >
-            <div className="flex flex-col items-center gap-6">
-              {/* Circular Progress */}
-              <div className="relative w-24 h-24">
-                {/* Percentage text */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl font-medium text-primary">
-                    {Math.round(loadingProgress)}%
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-secondary">Loading resources...</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* laptop stage */}
       <div className="fixed top-0 h-screen w-screen overflow-hidden z-0">
         {/* laptop screen video  */}
         <motion.video
           className="absolute inset-0 pointer-events-none w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-enclosure]:hidden"
-          src={`${import.meta.env.BASE_URL}videos/coding.mp4`}
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/videos/coding.mp4`}
           style={{
             opacity: gifOpacity,
             y: gifY,
@@ -110,16 +74,7 @@ export default function HeroSection() {
             willChange: "transform, opacity, filter",
           }}
           onCanPlay={(e) => {
-            console.log("Video loaded");
-            const video = e.currentTarget;
-            video.play().catch((error) => {
-              console.log("Autoplay failed:", error);
-            });
-            setIsVideoLoaded(true);
-          }}
-          onError={() => {
-            console.log("Video error");
-            setIsVideoLoaded(true);
+            e.currentTarget.play().catch(() => {});
           }}
           autoPlay
           loop
@@ -155,7 +110,7 @@ export default function HeroSection() {
 
         {/* laptop background image */}
         <motion.div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat bg-[url('/images/laptop_m.webp')] md:bg-[url('/images/laptop.webp')]"
+          className="laptop-bg absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
           style={{
             scale: laptopScale,
             opacity: bgOpacity,
@@ -163,33 +118,6 @@ export default function HeroSection() {
             transform: "translateZ(0)",
           }}
         >
-          {/* Preload images */}
-          <img
-            src={`${import.meta.env.BASE_URL}images/laptop.webp`}
-            alt=""
-            className="hidden"
-            onLoad={() => {
-              console.log("Desktop image loaded");
-              setIsImageLoaded(true);
-            }}
-            onError={() => {
-              console.log("Desktop image error");
-              setIsImageLoaded(true);
-            }}
-          />
-          <img
-            src={`${import.meta.env.BASE_URL}images/laptop_m.webp`}
-            alt=""
-            className="hidden"
-            onLoad={() => {
-              console.log("Mobile image loaded");
-              setIsImageMobileLoaded(true);
-            }}
-            onError={() => {
-              console.log("Mobile image error");
-              setIsImageMobileLoaded(true);
-            }}
-          />
         </motion.div>
 
         {/* hero */}
@@ -204,9 +132,9 @@ export default function HeroSection() {
               willChange: "transform",
             }}
           >
-            {t("hero.titleTop")}
+            {t("titleTop")}
             <br />
-            {t("hero.titleBottom")}
+            {t("titleBottom")}
           </motion.span>
 
           {/* Lb text */}
@@ -220,11 +148,11 @@ export default function HeroSection() {
             }}
           >
             <span className="text-[1.67em] tracking-[-0.064em] leading-1 text-primary">
-              <Trans i18nKey="hero.leftBottomTitle" />
+              <Trans text={t("leftBottomTitle")} />
             </span>
             <hr className="my-5 h-px w-1/6 bg-border" />
             <span className="text-[0.83em] tracking-[-0.03em] text-secondary">
-              <Trans i18nKey="hero.leftBottomDescription" />
+              <Trans text={t("leftBottomDescription")} />
             </span>
           </motion.div>
 
@@ -239,7 +167,7 @@ export default function HeroSection() {
             }}
           >
             <span className="text-[3em] md:text-[5em] leading-[0.92] tracking-[-0.06em] font-medium text-primary">
-              <Trans i18nKey="hero.name" />
+              {t("name")}
             </span>
 
             <div className="mt-10 ml-auto hidden md:block w-[30vw]">
@@ -270,11 +198,11 @@ export default function HeroSection() {
                     }}
                   />
                   <span className="text-primary font-medium">
-                    {t("hero.scrollDown")}
+                    {t("scrollDown")}
                   </span>
                 </motion.span>
 
-                <span>{t("hero.exploreWork")}</span>
+                <span>{t("exploreWork")}</span>
               </div>
             </div>
           </motion.div>
