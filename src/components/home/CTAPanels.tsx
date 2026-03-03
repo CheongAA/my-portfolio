@@ -15,17 +15,17 @@ const bgVariants = {
 };
 
 const textVariants = {
-  rest: { color: "var(--color-primary)" },
+  rest: { color: "var(--color-text-primary)" },
   hover: { color: "var(--color-background)" },
 };
 
 const arrowVariants = {
-  rest: { opacity: 0, x: -12, color: "var(--color-primary)" },
+  rest: { opacity: 0, x: -12, color: "var(--color-text-primary)" },
   hover: { opacity: 1, x: 0, color: "var(--color-background)" },
 };
 
 const subtitleVariants = {
-  rest: { opacity: 0.5, color: "var(--color-secondary)" },
+  rest: { opacity: 0.5, color: "var(--color-text-secondary)" },
   hover: { opacity: 1, color: "var(--color-background)" },
 };
 
