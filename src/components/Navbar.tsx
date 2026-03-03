@@ -3,26 +3,33 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "@/i18n/navigation";
 import Container from "./Container";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NavLink from "./NavLink";
+import { NAV_LINKS } from "@/constants/navLinks";
 
 const Navbar = () => {
   const t = useTranslations("nav");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <Container className="w-full flex items-center justify-end md:justify-between my-0">
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center gap-1">
-        <NavLink href="#about">{t("about")}</NavLink>
-        <NavLink href="#experiences">{t("experiences")}</NavLink>
-        <NavLink href="#contact">{t("contact")}</NavLink>
+        {NAV_LINKS.map(({ href, labelKey }) => (
+          <NavLink key={href} href={href} active={isActive(href)}>
+            {t(labelKey)}
+          </NavLink>
+        ))}
       </nav>
 
       {/* Desktop Language Switcher & Mobile Menu Button */}
       <div className="flex items-center gap-1">
-        {/* Desktop Language Switcher */}
         <div className="hidden md:flex">
           <LanguageSwitcher />
         </div>
@@ -34,21 +41,16 @@ const Navbar = () => {
           aria-label="Toggle menu"
         >
           <div className="relative w-6 h-6">
-            {/* top */}
             <motion.span
               className="absolute left-0 top-1/2 w-full h-0.5 bg-current origin-center"
               animate={isMenuOpen ? { rotate: 45 } : { rotate: 0, y: -6 }}
               transition={{ duration: 0.2 }}
             />
-
-            {/* middle */}
             <motion.span
               className="absolute left-0 top-1/2 w-full h-0.5 bg-current"
               animate={{ opacity: isMenuOpen ? 0 : 1 }}
               transition={{ duration: 0.2 }}
             />
-
-            {/* bottom */}
             <motion.span
               className="absolute left-0 top-1/2 w-full h-0.5 bg-current origin-center"
               animate={isMenuOpen ? { rotate: -45 } : { rotate: 0, y: 6 }}
@@ -68,15 +70,16 @@ const Navbar = () => {
             className="fixed inset-0 h-svh z-40 md:hidden bg-background pt-20 pb-8 px-10"
           >
             <nav className="flex flex-col gap-4">
-              <NavLink href="#about" onClick={() => setIsMenuOpen(false)}>
-                {t("about")}
-              </NavLink>
-              <NavLink href="#experiences" onClick={() => setIsMenuOpen(false)}>
-                {t("experiences")}
-              </NavLink>
-              <NavLink href="#contact" onClick={() => setIsMenuOpen(false)}>
-                {t("contact")}
-              </NavLink>
+              {NAV_LINKS.map(({ href, labelKey }) => (
+                <NavLink
+                  key={href}
+                  href={href}
+                  active={isActive(href)}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {t(labelKey)}
+                </NavLink>
+              ))}
               <div className="mt-4 pt-4 border-t border-border">
                 <LanguageSwitcher
                   onLanguageChange={() => setIsMenuOpen(false)}
