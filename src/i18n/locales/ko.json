@@ -1,8 +1,11 @@
 {
   "nav": {
+    "home": "홈",
     "about": "소개",
     "experiences": "경험",
-    "contact": "연락하기"
+    "projects": "프로젝트",
+    "contact": "연락하기",
+    "blog": "블로그"
   },
   "hero": {
     "titleTop": "프론트엔드",
@@ -18,6 +21,7 @@
   },
   "projects": {
     "title": "주요 프로젝트",
+    "cta": "프로젝트 전체 보기",
     "items": [
       {
         "title": "운세달",
@@ -27,6 +31,19 @@
         "link": "https://saju-sage.vercel.app/"
       }
     ]
+  },
+  "notFound": {
+    "title": "페이지를 찾을 수 없습니다",
+    "description": "요청하신 페이지가 존재하지 않거나 이동되었습니다.",
+    "back": "홈으로 돌아가기"
+  },
+  "blog": {
+    "title": "블로그",
+    "empty": "아직 포스트가 없습니다.",
+    "all": "전체",
+    "noResults": "해당 카테고리의 포스트가 없습니다.",
+    "prev": "이전",
+    "next": "다음"
   },
   "contact": {
     "title": "연락하기",
@@ -65,6 +82,7 @@
         "url": "https://instagram.com/kimcheongaa"
       }
     ],
+    "cta": "연락하기",
     "copyright": "모든 권리 보유."
   }
 }
