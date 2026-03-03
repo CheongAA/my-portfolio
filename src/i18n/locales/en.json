@@ -19,6 +19,11 @@
   "about": {
     "text": "I'm a front-end developer<br/>with a deep understanding of the entire service.<br/><br/>With experience in both<br/>front-end and back-end,<br/>I build user-facing interfaces<br/>and operational tools<br/>together."
   },
+  "stats": {
+    "yearsLabel": "Years of Experience",
+    "projectsLabel": "Projects Delivered",
+    "companiesLabel": "Companies"
+  },
   "projects": {
     "title": "Featured Projects",
     "cta": "View all projects",
@@ -43,7 +48,9 @@
     "all": "All",
     "noResults": "No posts in this category.",
     "prev": "Prev",
-    "next": "Next"
+    "next": "Next",
+    "backToList": "← Back to list",
+    "currentPost": "Now reading"
   },
   "contact": {
     "title": "Let's Connect",

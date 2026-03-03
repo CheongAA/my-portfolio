@@ -19,9 +19,14 @@
   "about": {
     "text": "서비스 전반을 이해하는<br/>프론트엔드 개발자입니다.<br/><br/>프론트엔드와 백엔드를 모두 경험하며<br/>사용자 화면과 운영 도구를<br/>함께 만들어왔습니다."
   },
+  "stats": {
+    "yearsLabel": "년 경력",
+    "projectsLabel": "프로젝트",
+    "companiesLabel": "회사"
+  },
   "projects": {
-    "title": "주요 프로젝트",
-    "cta": "프로젝트 전체 보기",
+    "title": "프로젝트",
+    "cta": "주요 프로젝트 전체 보기",
     "items": [
       {
         "title": "운세달",
@@ -43,7 +48,9 @@
     "all": "전체",
     "noResults": "해당 카테고리의 포스트가 없습니다.",
     "prev": "이전",
-    "next": "다음"
+    "next": "다음",
+    "backToList": "← 목록으로",
+    "currentPost": "현재 글"
   },
   "contact": {
     "title": "연락하기",

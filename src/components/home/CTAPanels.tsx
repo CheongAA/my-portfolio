@@ -44,9 +44,9 @@ interface PanelProps {
 
 function Panel({ href, title, subtitle, borderRight }: PanelProps) {
   return (
-    <Link href={href} className="flex-1 block">
+    <Link href={href} className="flex-1 min-w-0 block">
       <motion.div
-        className={`relative overflow-hidden min-h-[45vh] flex flex-col justify-end p-10 md:p-16 cursor-pointer${borderRight ? " border-r border-border" : ""}`}
+        className={`relative overflow-hidden w-full lg:min-h-[45vh] flex flex-col justify-end p-10 md:p-16 cursor-pointer${borderRight ? " border-b lg:border-r border-border" : ""}`}
         variants={panelVariants}
         initial="rest"
         whileHover="hover"
@@ -70,7 +70,7 @@ function Panel({ href, title, subtitle, borderRight }: PanelProps) {
 
           <div className="flex items-end justify-between gap-4">
             <motion.h2
-              className="text-5xl md:text-7xl lg:text-8xl font-medium tracking-tight leading-none"
+              className="text-5xl lg:text-8xl font-medium tracking-tight leading-none"
               variants={textVariants}
               transition={textTransition}
             >
@@ -78,7 +78,7 @@ function Panel({ href, title, subtitle, borderRight }: PanelProps) {
             </motion.h2>
 
             <motion.span
-              className="text-4xl md:text-6xl font-light mb-1"
+              className="text-4xl lg:text-6xl font-light mb-1"
               variants={arrowVariants}
               transition={textTransition}
             >
@@ -96,8 +96,8 @@ export default function CTAPanels() {
   const tContact = useTranslations("contact");
 
   return (
-    <section className="border-t border-border">
-      <div className="flex flex-col md:flex-row">
+    <section className="w-full border-t border-border">
+      <div className="w-full flex flex-col md:flex-row">
         <Panel
           href="/projects"
           title={tProjects("title")}

@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import Container from "../Container";
-import ProjectCard from "../ProjectCard";
+import ProjectCard from "./ProjectCard";
 
 export default function ProjectsSection() {
   const t = useTranslations("projects");
@@ -16,18 +16,12 @@ export default function ProjectsSection() {
   }>;
 
   return (
-    <section id="experiences">
+    <section>
       <Container>
         {/* Title */}
-        <motion.h2
-          className="mb-16 text-5xl md:text-7xl font-medium tracking-tight text-primary"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
+        <h2 className="mb-16 text-5xl md:text-7xl font-medium tracking-tight text-primary">
           {t("title")}
-        </motion.h2>
+        </h2>
 
         {/* Project Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-stretch">

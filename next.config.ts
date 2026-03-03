@@ -6,7 +6,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  output: isProd ? "export" : undefined,
   basePath: isProd ? "/my-portfolio" : "",
   trailingSlash: true,
   images: { unoptimized: true },

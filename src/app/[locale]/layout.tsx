@@ -3,6 +3,9 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import ViewportHeightProvider from "@/components/ViewportHeightProvider";
+import Navbar from "@/components/Navbar";
+import ScrollToTop from "@/components/ScrollToTop";
+import Footer from "@/components/Footer";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -28,7 +31,15 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider messages={messages}>
       <ViewportHeightProvider />
-      {children}
+
+      <div className="relative bg-background text-foreground overflow-hidden flex flex-col">
+        <header className="fixed w-full z-30 flex justify-center items-center pt-4 backdrop-blur">
+          <Navbar />
+        </header>
+        {children}
+        <Footer />
+        <ScrollToTop />
+      </div>
     </NextIntlClientProvider>
   );
 }

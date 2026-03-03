@@ -1,5 +1,5 @@
 import { setRequestLocale } from "next-intl/server";
-import ContactSection from "@/components/home/ContactSection";
+import ContactSection from "@/components/contact/ContactSection";
 
 type Props = {
   params: Promise<{ locale: string }>;

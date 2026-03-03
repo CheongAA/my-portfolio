@@ -1,7 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import HeroSection from "@/components/home/HeroSection";
 import AboutSection from "@/components/home/AboutSection";
-import TechMarquee from "@/components/home/TechMarquee";
+import StatsSection from "@/components/home/StatsSection";
 import CTAPanels from "@/components/home/CTAPanels";
 
 type Props = {
@@ -16,7 +16,7 @@ export default async function HomePage({ params }: Props) {
     <>
       <HeroSection />
       <AboutSection />
-      <TechMarquee />
+      <StatsSection />
       <CTAPanels />
     </>
   );

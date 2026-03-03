@@ -1,12 +1,16 @@
 import React from "react";
+import NextLink from "next/link";
+import { Link } from "@/i18n/navigation";
 
 type NavLinkBaseProps = {
   children: React.ReactNode;
   className?: string;
+  active?: boolean;
+  noLocale?: boolean;
 };
 
-type NavLinkAsAnchor = NavLinkBaseProps & {
-  as?: "a";
+type NavLinkAsLink = NavLinkBaseProps & {
+  as?: "link";
   href: string;
   onClick?: () => void;
 };
@@ -17,37 +21,38 @@ type NavLinkAsButton = NavLinkBaseProps & {
   onClick?: () => void;
 };
 
-type NavLinkProps = NavLinkAsAnchor | NavLinkAsButton;
+type NavLinkProps = NavLinkAsLink | NavLinkAsButton;
 
 const NavLink = ({
-  as = "a",
+  as = "link",
   children,
   className = "",
+  active = false,
+  noLocale = false,
   ...props
 }: NavLinkProps) => {
   const baseClassName = `
-    relative px-4 py-2 text-md font-medium text-primary/85
+    relative px-4 py-2 text-md font-medium
     transition-colors duration-300
     hover:text-primary
     group
+    ${active ? "text-primary" : "text-primary/85"}
     ${className}
   `;
 
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    const href = (props as NavLinkAsAnchor).href;
-    const onClick = (props as NavLinkAsAnchor).onClick;
-
-    if (href?.startsWith("#")) {
-      e.preventDefault();
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-
-    // Call additional onClick if provided
-    onClick?.();
-  };
+  const pill = (
+    <span
+      className={`
+        absolute inset-0 rounded-full
+        bg-nav-hover
+        transition-all duration-300 ease-out
+        group-hover:opacity-100
+        group-hover:scale-100
+        group-hover:cursor-pointer
+        ${active ? "opacity-100 scale-100" : "opacity-0 scale-90"}
+      `}
+    />
+  );
 
   if (as === "button") {
     return (
@@ -55,46 +60,29 @@ const NavLink = ({
         className={baseClassName}
         onClick={(props as NavLinkAsButton).onClick}
       >
-        {/* pill background */}
-        <span
-          className="
-            absolute inset-0 rounded-full
-            bg-nav-hover
-            opacity-0 scale-90
-            transition-all duration-300 ease-out
-            group-hover:opacity-100
-            group-hover:scale-100
-            group-hover:cursor-pointer
-          "
-        />
-        {/* text */}
+        {pill}
         {children}
       </button>
     );
   }
 
-  return (
-    <a
-      className={baseClassName}
-      href={(props as NavLinkAsAnchor).href}
-      onClick={handleClick}
-    >
-      {/* pill background */}
-      <span
-        className="
-          absolute inset-0 rounded-full 
-          bg-nav-hover
-          opacity-0 scale-90
-          transition-all duration-300 ease-out
-          group-hover:opacity-100
-          group-hover:scale-100
-          group-hover:cursor-pointer
-        "
-      />
+  const href = (props as NavLinkAsLink).href;
+  const onClick = (props as NavLinkAsLink).onClick;
 
-      {/* text */}
+  if (noLocale) {
+    return (
+      <NextLink className={baseClassName} href={href} onClick={onClick}>
+        {pill}
+        {children}
+      </NextLink>
+    );
+  }
+
+  return (
+    <Link className={baseClassName} href={href} onClick={onClick}>
+      {pill}
       {children}
-    </a>
+    </Link>
   );
 };
 

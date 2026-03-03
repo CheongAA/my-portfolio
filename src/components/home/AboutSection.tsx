@@ -39,7 +39,7 @@ export default function AboutSection() {
   const progress = useTransform(scrollYProgress, [0, 1], [0, totalChars]);
 
   return (
-    <section id="about">
+    <section id="about" className="relative my-32">
       <Container>
         <motion.span
           ref={ref}

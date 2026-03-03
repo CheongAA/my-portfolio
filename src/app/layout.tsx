@@ -1,10 +1,27 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export const metadata: Metadata = {
-  title: "Devlog - Kim Cheong A",
-  description: "Developer blog by Kim Cheong A",
-  icons: { icon: "/favicon.ico" },
+  title: "Kim Cheong A — Frontend Developer",
+  description:
+    "서비스 전반을 이해하는 프론트엔드 개발자 김청아의 포트폴리오입니다.",
+  icons: { icon: `${basePath}/favicon.ico` },
+  openGraph: {
+    title: "Kim Cheong A — Frontend Developer",
+    description:
+      "서비스 전반을 이해하는 프론트엔드 개발자 김청아의 포트폴리오입니다.",
+    type: "website",
+    locale: "ko_KR",
+    url: "https://cheongaa.github.io/my-portfolio",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kim Cheong A — Frontend Developer",
+    description:
+      "서비스 전반을 이해하는 프론트엔드 개발자 김청아의 포트폴리오입니다.",
+  },
 };
 
 export default function RootLayout({
@@ -13,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html suppressHydrationWarning>
+    <html suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

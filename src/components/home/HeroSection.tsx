@@ -1,19 +1,29 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
   easeInOut,
   motion,
+  AnimatePresence,
   useScroll,
   useTransform,
 } from "framer-motion";
 import Container from "../Container";
 import Trans from "../Trans";
+import basePath from "@/lib/basePath";
 
 export default function HeroSection() {
   const t = useTranslations("hero");
   const mainRef = useRef<HTMLDivElement>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    const img = new window.Image();
+    img.src = `${basePath}/images/laptop.webp`;
+    img.onload = () => setImageLoaded(true);
+    img.onerror = () => setImageLoaded(true);
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: mainRef,
@@ -27,7 +37,7 @@ export default function HeroSection() {
     [1, 1.35, 2.4, 3.2],
     {
       ease: easeInOut,
-    }
+    },
   );
   const bgOpacity = useTransform(scrollYProgress, [0, 0.62, 0.74], [1, 1, 0]);
 
@@ -36,7 +46,7 @@ export default function HeroSection() {
   const gifY = useTransform(
     scrollYProgress,
     [0, 0.5, 0.7],
-    ["0%", "-5%", "-10%"]
+    ["0%", "-5%", "-10%"],
   );
 
   // text
@@ -60,21 +70,39 @@ export default function HeroSection() {
 
   return (
     <section ref={mainRef} className="relative h-[200vh] w-full">
+      {/* Loading overlay */}
+      <AnimatePresence>
+        {!imageLoaded && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-background flex items-center justify-center"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+          >
+            <motion.div
+              className="w-16 h-px bg-foreground"
+              animate={{ scaleX: [0.3, 1, 0.3] }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* laptop stage */}
       <div className="fixed top-0 h-screen w-screen overflow-hidden z-0">
         {/* laptop screen video  */}
         <motion.video
           className="absolute inset-0 pointer-events-none w-full h-full object-cover [&::-webkit-media-controls]:hidden [&::-webkit-media-controls-enclosure]:hidden"
-          src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/videos/coding.mp4`}
+          src={`${basePath}/videos/coding.mp4`}
           style={{
             opacity: gifOpacity,
             y: gifY,
             filter:
               "contrast(1.18) saturate(1.08) brightness(0.92) hue-rotate(-10deg)",
             willChange: "transform, opacity, filter",
-          }}
-          onCanPlay={(e) => {
-            e.currentTarget.play().catch(() => {});
           }}
           autoPlay
           loop
@@ -108,17 +136,28 @@ export default function HeroSection() {
           />
         </motion.div>
 
-        {/* laptop background image */}
+        {/* laptop background image - mobile */}
         <motion.div
-          className="laptop-bg absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          className="md:hidden absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
           style={{
+            backgroundImage: `url(${basePath}/images/laptop_m.webp)`,
             scale: laptopScale,
             opacity: bgOpacity,
             willChange: "transform, opacity",
             transform: "translateZ(0)",
           }}
-        >
-        </motion.div>
+        />
+        {/* laptop background image - desktop */}
+        <motion.div
+          className="hidden md:block absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${basePath}/images/laptop.webp)`,
+            scale: laptopScale,
+            opacity: bgOpacity,
+            willChange: "transform, opacity",
+            transform: "translateZ(0)",
+          }}
+        />
 
         {/* hero */}
         <Container className="relative h-full my-0">
@@ -167,7 +206,7 @@ export default function HeroSection() {
             }}
           >
             <span className="text-[3em] md:text-[5em] leading-[0.92] tracking-[-0.06em] font-medium text-primary">
-              {t("name")}
+              <Trans text={t("name")} />
             </span>
 
             <div className="mt-10 ml-auto hidden md:block w-[30vw]">

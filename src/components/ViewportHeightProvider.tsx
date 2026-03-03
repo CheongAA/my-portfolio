@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import smoothscroll from "smoothscroll-polyfill";
 
 export default function ViewportHeightProvider() {
   useEffect(() => {
-    smoothscroll.polyfill();
-
     function setVh() {
       const vh = window.visualViewport?.height
         ? window.visualViewport.height * 0.01

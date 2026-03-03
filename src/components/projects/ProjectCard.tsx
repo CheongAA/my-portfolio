@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import basePath from "@/lib/basePath";
 
 interface ProjectCardProps {
   title: string;
@@ -23,7 +24,7 @@ export default function ProjectCard({
         {/* Image */}
         <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl">
           <img
-            src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${image}`}
+            src={`${basePath}${image}`}
             alt={title}
             className="object-cover"
             sizes="(min-width: 768px) 50vw, 100vw"
@@ -36,7 +37,7 @@ export default function ProjectCard({
 
         <ul className="mt-auto flex flex-wrap gap-2">
           {tech.map((item) => (
-            <li key={item} className="rounded-md bg-muted px-2 py-1 text-sm">
+            <li key={item} className="rounded-md bg-cyan-800 px-2 py-1 text-sm">
               {item}
             </li>
           ))}

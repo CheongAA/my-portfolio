@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio log --oneline -3)",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio diff 5d2aa19..0cf86f4)",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio log 5d2aa19..0cf86f4 --oneline)",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio diff 0cf86f4..4afc803)",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio log 0cf86f4..4afc803 --oneline)",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio diff 4afc803..fc0b870)",
+      "Bash(ls /Users/cheonga/Desktop/project/my-portfolio/src/app/[locale]/)",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio log --oneline -10)",
+      "Bash(git add src/components/home/TechMarquee.tsx)",
+      "Bash(git commit -m \"feat: add TechMarquee component\")",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio diff fc0b870..fff4afc -- src/components/home/TechMarquee.tsx)",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio log fc0b870..fff4afc --oneline)",
+      "Bash(git add src/components/home/CTAPanels.tsx)",
+      "Bash(git commit -m \"feat: add CTAPanels component with hover fill animation\")",
+      "Bash(git -C /Users/cheonga/Desktop/project/my-portfolio diff fff4afc e9db077 -- src/components/home/CTAPanels.tsx)",
+      "Bash(git commit -m \"fix: correct CSS variable names in CTAPanels variants\")"
+    ],
+    "additionalDirectories": [
+      "/Users/cheonga/Desktop/project/my-portfolio/src/app/[locale]/blog",
+      "/Users/cheonga/Desktop/project/my-portfolio/docs"
+    ]
+  }
+}
