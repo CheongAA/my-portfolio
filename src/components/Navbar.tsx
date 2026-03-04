@@ -7,6 +7,7 @@ import { usePathname } from "@/i18n/navigation";
 import Container from "./Container";
 import LanguageSwitcher from "./LanguageSwitcher";
 import NavLink from "./NavLink";
+import ThemeToggle from "./ThemeToggle";
 import { NAV_LINKS } from "@/constants/navLinks";
 
 const Navbar = () => {
@@ -32,6 +33,9 @@ const Navbar = () => {
       <div className="flex items-center gap-1">
         <div className="hidden md:flex">
           <LanguageSwitcher />
+        </div>
+        <div className="hidden md:flex">
+          <ThemeToggle />
         </div>
 
         {/* Mobile Menu Button */}
@@ -80,10 +84,11 @@ const Navbar = () => {
                   {t(labelKey)}
                 </NavLink>
               ))}
-              <div className="mt-4 pt-4 border-t border-border">
+              <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                 <LanguageSwitcher
                   onLanguageChange={() => setIsMenuOpen(false)}
                 />
+                <ThemeToggle />
               </div>
             </nav>
           </motion.div>
