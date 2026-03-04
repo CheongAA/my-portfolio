@@ -15,12 +15,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ko_KR",
     url: "https://cheongaa.github.io/my-portfolio",
+    images: [
+      {
+        url: "https://cheongaa.github.io/my-portfolio/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Kim Cheong A — Frontend Developer",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Kim Cheong A — Frontend Developer",
     description:
       "서비스 전반을 이해하는 프론트엔드 개발자 김청아의 포트폴리오입니다.",
+    images: ["https://cheongaa.github.io/my-portfolio/images/og-image.png"],
   },
 };
 
