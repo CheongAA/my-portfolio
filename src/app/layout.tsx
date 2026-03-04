@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     description:
       "서비스 전반을 이해하는 프론트엔드 개발자 김청아의 포트폴리오입니다.",
     type: "website",
+    siteName: "Kim Cheong A — Frontend Developer",
     locale: "ko_KR",
     url: "https://cheongaa.github.io/my-portfolio",
     images: [
