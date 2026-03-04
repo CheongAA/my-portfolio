@@ -22,7 +22,8 @@ export default function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="icon"
+      data-active
+      size="sm"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label="Toggle theme"
     >

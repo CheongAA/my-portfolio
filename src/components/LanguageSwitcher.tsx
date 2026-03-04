@@ -22,7 +22,7 @@ export default function LanguageSwitcher({
   };
 
   return (
-    <Button variant="ghost" size="sm" onClick={toggleLanguage}>
+    <Button variant="ghost" data-active size="sm" onClick={toggleLanguage}>
       {locale === "en" ? "Ko" : "En"}
     </Button>
   );

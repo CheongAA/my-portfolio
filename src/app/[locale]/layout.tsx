@@ -53,7 +53,7 @@ export default async function LocaleLayout({
       <ViewportHeightProvider />
 
       <div className="relative bg-background text-foreground overflow-hidden flex flex-col min-h-screen">
-        <header className="fixed w-full z-30 flex justify-center items-center pt-4 backdrop-blur">
+        <header className="fixed w-full z-30 flex justify-center items-center py-2 backdrop-blur-md bg-background/70">
           <Navbar />
         </header>
         {children}

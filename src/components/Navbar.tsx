@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import Container from "./Container";
 import LanguageSwitcher from "./LanguageSwitcher";
-import NavLink from "./NavLink";
 import ThemeToggle from "./ThemeToggle";
 import { NAV_LINKS } from "@/constants/navLinks";
+import { Button } from "./ui/button";
 
 const Navbar = () => {
   const t = useTranslations("nav");
@@ -23,25 +23,28 @@ const Navbar = () => {
       {/* Desktop Navigation */}
       <nav className="hidden md:flex items-center gap-1">
         {NAV_LINKS.map(({ href, labelKey }) => (
-          <NavLink key={href} href={href} active={isActive(href)}>
-            {t(labelKey)}
-          </NavLink>
+          <Button
+            key={href}
+            variant="ghost"
+            data-active={isActive(href)}
+            asChild
+          >
+            <Link href={href}>{t(labelKey)}</Link>
+          </Button>
         ))}
       </nav>
 
-      {/* Desktop Language Switcher & Mobile Menu Button */}
-      <div className="flex items-center gap-1">
-        <div className="hidden md:flex">
+      {/* Right controls */}
+      <div className="flex items-center justify-between gap-1 w-full md:w-fit">
+        <div className="flex flex-row gap-2">
           <LanguageSwitcher />
-        </div>
-        <div className="hidden md:flex">
           <ThemeToggle />
         </div>
 
         {/* Mobile Menu Button */}
-        <button
+        <Button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="md:hidden relative z-50 pt-2 text-primary"
+          className="md:hidden relative z-50 text-primary"
           aria-label="Toggle menu"
         >
           <div className="relative w-6 h-6">
@@ -61,7 +64,7 @@ const Navbar = () => {
               transition={{ duration: 0.2 }}
             />
           </div>
-        </button>
+        </Button>
       </div>
 
       {/* Mobile Menu */}
@@ -75,21 +78,18 @@ const Navbar = () => {
           >
             <nav className="flex flex-col gap-4">
               {NAV_LINKS.map(({ href, labelKey }) => (
-                <NavLink
+                <Button
                   key={href}
-                  href={href}
-                  active={isActive(href)}
+                  variant="ghost"
+                  size="lg"
+                  className="justify-start"
+                  data-active={isActive(href)}
                   onClick={() => setIsMenuOpen(false)}
+                  asChild
                 >
-                  {t(labelKey)}
-                </NavLink>
+                  <Link href={href}>{t(labelKey)}</Link>
+                </Button>
               ))}
-              <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                <LanguageSwitcher
-                  onLanguageChange={() => setIsMenuOpen(false)}
-                />
-                <ThemeToggle />
-              </div>
             </nav>
           </motion.div>
         )}

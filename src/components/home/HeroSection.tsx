@@ -163,7 +163,7 @@ export default function HeroSection() {
         <Container className="relative h-full my-0">
           {/* Lt text */}
           <motion.span
-            className="absolute top-1/5 text-[3em] md:text-[5em] leading-[0.88em] tracking-[-0.06em] font-medium text-primary"
+            className="absolute top-1/5 text-[3em] md:text-[5em] leading-[0.88em] tracking-[-0.06em] font-medium text-white"
             style={{
               scale: leftTopScale,
               x: leftTopX,
@@ -186,11 +186,11 @@ export default function HeroSection() {
               willChange: "transform",
             }}
           >
-            <span className="text-[1.67em] tracking-[-0.064em] leading-1 text-primary">
+            <span className="text-[1.67em] tracking-[-0.064em] leading-1 text-white">
               <Trans text={t("leftBottomTitle")} />
             </span>
-            <hr className="my-5 h-px w-1/6 bg-border" />
-            <span className="text-[0.83em] tracking-[-0.03em] text-secondary">
+            <hr className="my-5 h-px w-1/6 bg-white/30" />
+            <span className="text-[0.83em] tracking-[-0.03em] text-white/60">
               <Trans text={t("leftBottomDescription")} />
             </span>
           </motion.div>
@@ -205,15 +205,15 @@ export default function HeroSection() {
               willChange: "transform",
             }}
           >
-            <span className="text-[3em] md:text-[5em] leading-[0.92] tracking-[-0.06em] font-medium text-primary">
+            <span className="text-[3em] md:text-[5em] leading-[0.92] tracking-[-0.06em] font-medium text-white">
               <Trans text={t("name")} />
             </span>
 
             <div className="mt-10 ml-auto hidden md:block w-[30vw]">
-              <hr className="h-px w-full bg-foreground" />
+              <hr className="h-px w-full bg-white/40" />
 
               {/* scroll guide */}
-              <div className="mt-5 flex items-center justify-between text-[11px] tracking-[0.24em] uppercase text-secondary">
+              <div className="mt-5 flex items-center justify-between text-[11px] tracking-[0.24em] uppercase text-white/50">
                 <motion.span
                   className="flex items-center gap-3"
                   animate={{
@@ -226,7 +226,7 @@ export default function HeroSection() {
                   }}
                 >
                   <motion.span
-                    className="h-1.5 w-1.5 rotate-45 border-r border-b border-foreground"
+                    className="h-1.5 w-1.5 rotate-45 border-r border-b border-white"
                     animate={{
                       opacity: [0.4, 1, 0.4],
                     }}

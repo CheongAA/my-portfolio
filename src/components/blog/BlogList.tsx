@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { PostMeta } from "@/lib/posts";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 
 const POSTS_PER_PAGE = 5;
 
@@ -77,28 +79,22 @@ export default function BlogList({ posts }: BlogListProps) {
       {/* Category filter */}
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-12">
-          <button
+          <Button
+            variant={"outline"}
             onClick={() => handleCategory(null)}
-            className={`px-4 py-1.5 rounded-full text-sm border transition-colors ${
-              activeCategory === null
-                ? "border-primary text-primary"
-                : "border-border text-secondary hover:border-primary/50 hover:text-primary"
-            }`}
+            data-active={activeCategory === null}
           >
             {t("all")}
-          </button>
+          </Button>
           {categories.map((cat) => (
-            <button
+            <Button
               key={cat}
+              variant={"outline"}
               onClick={() => handleCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-sm border transition-colors ${
-                activeCategory === cat
-                  ? "border-primary text-primary"
-                  : "border-border text-secondary hover:border-primary/50 hover:text-primary"
-              }`}
+              data-active={activeCategory === cat}
             >
               {cat}
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -122,15 +118,11 @@ export default function BlogList({ posts }: BlogListProps) {
                 </span>
                 <div className="flex items-center gap-2 shrink-0">
                   {post.series && (
-                    <span className="text-xs text-primary/60 border border-primary/20 rounded-full px-3 py-1">
+                    <Badge>
                       {post.series} #{post.seriesOrder}
-                    </span>
+                    </Badge>
                   )}
-                  {post.category && (
-                    <span className="text-xs text-secondary border border-border rounded-full px-3 py-1">
-                      {post.category}
-                    </span>
-                  )}
+                  {post.category && <Badge>{post.category}</Badge>}
                 </div>
               </Link>
             </li>
@@ -141,37 +133,30 @@ export default function BlogList({ posts }: BlogListProps) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-12 pt-8 border-t border-border">
-          <button
-            onClick={() => setPage((p) => p - 1)}
-            disabled={page === 1}
-            className="text-sm text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
+          <Button onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
             ← {t("prev")}
-          </button>
+          </Button>
 
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
+              <Button
                 key={p}
+                data-active={p === page}
                 onClick={() => setPage(p)}
-                className={`w-8 h-8 text-sm rounded-full transition-colors ${
-                  p === page
-                    ? "bg-foreground text-background"
-                    : "text-secondary hover:text-primary"
-                }`}
+                variant="secondary"
+                className="w-8 h-8 text-sm"
               >
                 {p}
-              </button>
+              </Button>
             ))}
           </div>
 
-          <button
+          <Button
             onClick={() => setPage((p) => p + 1)}
             disabled={page === totalPages}
-            className="text-sm text-secondary hover:text-primary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {t("next")} →
-          </button>
+          </Button>
         </div>
       )}
     </div>

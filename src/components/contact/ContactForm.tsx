@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
+import { Button } from "../ui/button";
 
 export default function ContactForm() {
   const t = useTranslations("contact.form");
@@ -23,9 +24,9 @@ export default function ContactForm() {
 
     // Create mailto link with form data
     const mailtoLink = `mailto:kimcheonga97@gmail.com?subject=${encodeURIComponent(
-      formData.subject
+      formData.subject,
     )}&body=${encodeURIComponent(
-      `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
+      `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`,
     )}`;
 
     // Open email client
@@ -137,16 +138,18 @@ export default function ContactForm() {
 
       {/* Submit Button */}
       <div className="flex items-center gap-4">
-        <button
+        <Button
+          variant={"outline"}
+          size="lg"
           type="submit"
           disabled={isSubmitting}
-          className="group relative px-8 py-3 text-[13px] font-medium text-primary border border-border rounded-full transition-all duration-300 hover:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="group relative px-8 py-3"
         >
           <span className="absolute inset-0 rounded-full bg-nav-hover opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100" />
           <span className="relative">
             {isSubmitting ? t("sending") : t("send")}
           </span>
-        </button>
+        </Button>
 
         {submitStatus === "success" && (
           <motion.span
