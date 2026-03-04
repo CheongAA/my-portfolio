@@ -15,6 +15,7 @@ export default function BlogList({ posts }: BlogListProps) {
   const t = useTranslations("blog");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const categories = useMemo(() => {
     const set = new Set(
@@ -24,9 +25,16 @@ export default function BlogList({ posts }: BlogListProps) {
   }, [posts]);
 
   const filtered = useMemo(() => {
-    if (!activeCategory) return posts;
-    return posts.filter((p) => p.category === activeCategory);
-  }, [posts, activeCategory]);
+    const q = searchQuery.toLowerCase();
+    return posts.filter((p) => {
+      const matchesCategory = !activeCategory || p.category === activeCategory;
+      const matchesSearch =
+        !q ||
+        p.title.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q);
+      return matchesCategory && matchesSearch;
+    });
+  }, [posts, activeCategory, searchQuery]);
 
   const totalPages = Math.ceil(filtered.length / POSTS_PER_PAGE);
   const paginated = filtered.slice(
@@ -39,12 +47,36 @@ export default function BlogList({ posts }: BlogListProps) {
     setPage(1);
   }
 
+  function handleSearch(value: string) {
+    setSearchQuery(value);
+    setPage(1);
+  }
+
   if (posts.length === 0) {
     return <p className="text-secondary">{t("empty")}</p>;
   }
 
   return (
     <div>
+      {/* Search input */}
+      <div className="relative mb-6">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          className="w-full bg-transparent border border-border rounded-lg px-4 py-2.5 text-sm text-primary placeholder:text-secondary focus:outline-none focus:border-primary/50 transition-colors"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => handleSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary transition-colors text-xs"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
       {/* Category filter */}
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-12">
