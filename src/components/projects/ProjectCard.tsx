@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import basePath from "@/lib/basePath";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectCardProps {
   title: string;
@@ -66,11 +67,8 @@ export default function ProjectCard({
 
           <ul className="mt-auto flex flex-wrap gap-2">
             {tech.map((item) => (
-              <li
-                key={item}
-                className="rounded-full border border-foreground/20 px-3 py-1 text-xs text-foreground/60 transition-colors duration-300 group-hover:border-foreground/30 group-hover:text-foreground/80"
-              >
-                {item}
+              <li key={item}>
+                <Badge variant="outline">{item}</Badge>
               </li>
             ))}
           </ul>
