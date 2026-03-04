@@ -28,10 +28,7 @@ export default function BlogList({ posts }: BlogListProps) {
     const q = searchQuery.toLowerCase();
     return posts.filter((p) => {
       const matchesCategory = !activeCategory || p.category === activeCategory;
-      const matchesSearch =
-        !q ||
-        p.title.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q);
+      const matchesSearch = !q || p.title.toLowerCase().includes(q);
       return matchesCategory && matchesSearch;
     });
   }, [posts, activeCategory, searchQuery]);
@@ -108,14 +105,14 @@ export default function BlogList({ posts }: BlogListProps) {
 
       {/* Post list */}
       {paginated.length === 0 ? (
-        <p className="text-secondary py-12">{t("noResults")}</p>
+        <p className="text-secondary py-12 text-center">{t("noResults")}</p>
       ) : (
         <ul className="flex flex-col divide-y divide-border">
           {paginated.map((post) => (
             <li key={post.slug}>
               <Link
                 href={`/blog/${post.slug}`}
-                className="flex items-baseline gap-6 md:gap-12 py-6 group"
+                className="flex items-baseline gap-6 flex-col md:flex-row md:gap-12 py-6 group"
               >
                 <span className="text-secondary text-sm tabular-nums shrink-0">
                   {post.date}
@@ -123,7 +120,7 @@ export default function BlogList({ posts }: BlogListProps) {
                 <span className="flex-1 text-primary text-lg font-medium group-hover:underline underline-offset-4">
                   {post.title}
                 </span>
-                <div className="hidden md:flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   {post.series && (
                     <span className="text-xs text-primary/60 border border-primary/20 rounded-full px-3 py-1">
                       {post.series} #{post.seriesOrder}

@@ -15,7 +15,7 @@ export default async function BlogPage({ params }: Props) {
   const posts = getAllPosts();
 
   return (
-    <Container className="h-full">
+    <Container>
       <h1 className="text-5xl md:text-7xl font-medium tracking-tight text-primary mb-16">
         {t("title")}
       </h1>

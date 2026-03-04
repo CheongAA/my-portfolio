@@ -55,7 +55,7 @@ function StatItem({
 
   return (
     <div
-      className={`flex-1 py-10 px-6 md:py-16 md:px-16${
+      className={`flex-1 text-center py-10 px-6 md:py-16 md:px-16${
         borderRight ? " border-r border-border" : ""
       }`}
     >

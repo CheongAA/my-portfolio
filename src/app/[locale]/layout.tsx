@@ -32,7 +32,7 @@ export default async function LocaleLayout({
     <NextIntlClientProvider messages={messages}>
       <ViewportHeightProvider />
 
-      <div className="relative bg-background text-foreground overflow-hidden flex flex-col">
+      <div className="relative bg-background text-foreground overflow-hidden flex flex-col min-h-screen">
         <header className="fixed w-full z-30 flex justify-center items-center pt-4 backdrop-blur">
           <Navbar />
         </header>
