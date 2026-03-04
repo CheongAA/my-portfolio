@@ -50,7 +50,8 @@
     "prev": "Prev",
     "next": "Next",
     "backToList": "← Back to list",
-    "currentPost": "Now reading"
+    "currentPost": "Now reading",
+    "searchPlaceholder": "Search posts..."
   },
   "contact": {
     "title": "Let's Connect",
