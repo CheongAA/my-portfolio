@@ -2,7 +2,7 @@
 
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
-import NavLink from "./NavLink";
+import { Button } from "@/components/ui/button";
 
 type LanguageSwitcherProps = {
   onLanguageChange?: () => void;
@@ -22,8 +22,8 @@ export default function LanguageSwitcher({
   };
 
   return (
-    <NavLink as="button" onClick={toggleLanguage}>
+    <Button variant="ghost" size="sm" onClick={toggleLanguage}>
       {locale === "en" ? "Ko" : "En"}
-    </NavLink>
+    </Button>
   );
 }
