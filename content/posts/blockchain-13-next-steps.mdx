@@ -65,151 +65,19 @@ ABI는 컨트랙트의 설명서. 함수 이름, 인자, 반환값을 JSON으로
 
 ---
 
-## 여기서 더 나아가려면
+## 다음 시리즈: 이더리움 인터널
 
-### DeFi (탈중앙화 금융)
+이 시리즈에서 "블록체인이 뭔지, 어떻게 쓰는지"를 배웠다면, 다음 시리즈에서는 **"안에서 무슨 일이 벌어지는지"**를 파헤친다.
 
-탈중앙화 금융은 스마트 컨트랙트로 은행, 거래소, 대출 서비스를 구현한다.
+쓸 줄은 알지만 왜 이렇게 되는지 모르는 것들 — Merkle Tree가 실제로 어떻게 생겼는지, EVM이 옵코드를 어떻게 실행하는지, mempool에서 무슨 일이 벌어지는지, Layer 2가 어떻게 이더리움 보안을 상속받는지. 이걸 다루는 게 **이더리움 인터널 시리즈**다.
 
-**Uniswap (탈중앙화 거래소)**
+총 18편으로 구성되며, 5개 파트로 나뉜다.
 
-중앙화 거래소는 오더북으로 매수/매도를 매칭한다. Uniswap v2는 **AMM(Automated Market Maker)** 방식으로 동작한다. 두 토큰의 유동성 풀을 만들고, `x * y = k` 공식으로 가격을 결정한다.
-
-```
-ETH-USDC 풀: 100 ETH, 200,000 USDC
-k = 100 * 200,000 = 20,000,000
-
-ETH 1개를 팔면?
-  101 ETH * y = 20,000,000
-  y = 198,020 USDC
-  → 200,000 - 198,020 = 1,980 USDC를 받음
-```
-
-사람이 가격을 정하지 않는다. 수학이 가격을 정한다.
-
-**Aave (탈중앙화 대출)**
-
-ETH를 담보로 USDC를 빌린다. 담보 가치가 일정 비율 아래로 떨어지면 컨트랙트가 자동으로 담보를 청산한다. 은행 없이, 심사 없이, 코드가 대출을 집행한다.
-
-공부 방법: Uniswap v2 컨트랙트 소스를 읽어보기. 1000줄이 안 되는데, DeFi의 핵심 원리가 다 들어있다.
-
----
-
-### Layer 2: 왜 필요하고 어떻게 작동하나
-
-이더리움 메인넷은 초당 처리 트랜잭션(TPS)이 약 15~30개다. 비자카드는 초당 수천 건을 처리한다. 이더리움이 대중화되려면 처리량을 늘려야 한다.
-
-Layer 2는 이더리움 위에서 트랜잭션을 처리하고, 결과만 이더리움에 제출하는 방식이다. 이더리움의 보안을 활용하면서 처리량을 대폭 늘린다.
-
-**Optimistic Rollup (Arbitrum, Optimism)**
-
-```
-트랜잭션들 → L2에서 실행 → 배치로 묶어서 L1에 제출
-"일단 올바르다고 가정" → 7일 이의 제기 기간
-이의 없으면 최종 확정
-```
-
-이름이 "Optimistic"인 이유: 트랜잭션이 올바를 거라고 낙관적으로 가정한다. 이의를 제기하면 사기 증명(Fraud Proof) 과정을 거친다. 7일 대기 기간이 필요하다.
-
-**ZK-Rollup (zkSync, Starknet, Polygon zkEVM)**
-
-```
-트랜잭션들 → L2에서 실행 → 수학적 증명(ZK Proof) 생성 → L1에 제출
-증명이 있으면 즉시 확정 (대기 기간 없음)
-```
-
-ZK Proof는 "이 계산이 올바르게 수행됐다"는 것을 수학적으로 증명한다. 계산 내용을 공개하지 않고도 증명할 수 있어서 프라이버시 기능도 추가할 수 있다. 다만 ZK Proof 생성이 computationally 무겁다.
-
-**dApp 개발자 관점에서의 차이**
-
-wagmi 설정에서 체인만 바꾸면 같은 코드가 L2에서도 동작한다.
-
-```javascript
-import { arbitrum, optimism, base } from 'wagmi/chains'
-
-const config = createConfig({
-  chains: [mainnet, arbitrum, optimism, base],
-  // ...
-})
-```
-
-가스비가 L1의 1/100 수준이라 UX가 훨씬 좋다. 실제 서비스 대부분이 L2에서 돌아간다.
-
----
-
-### 스마트 컨트랙트 보안
-
-스마트 컨트랙트는 돈을 직접 다루고, 한 번 배포하면 수정이 안 된다. 취약점이 있으면 전액 탈취될 수 있다. 주요 취약점을 알아야 피할 수 있다.
-
-**1. 재진입 공격 (Reentrancy Attack)**
-
-2016년 The DAO 해킹의 원인. ETH 전송 중 악의적인 컨트랙트가 함수를 재귀 호출해서 잔액을 반복 탈취한다.
-
-```solidity
-// 취약한 코드
-function withdraw() public {
-    uint amount = balances[msg.sender];
-    // ETH 전송 → 악의적 컨트랙트의 fallback 실행 → withdraw 재호출
-    (bool success, ) = msg.sender.call{value: amount}("");
-    balances[msg.sender] = 0; // 잔액 초기화가 너무 늦음
-}
-
-// 안전한 코드: Checks-Effects-Interactions 패턴
-function withdraw() public {
-    uint amount = balances[msg.sender];
-    balances[msg.sender] = 0;  // 1. 먼저 상태 변경 (Effects)
-    (bool success, ) = msg.sender.call{value: amount}(""); // 2. 그 후 외부 호출 (Interactions)
-    require(success, "Transfer failed");
-}
-```
-
-또는 OpenZeppelin의 `ReentrancyGuard`를 사용:
-
-```solidity
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
-contract Vault is ReentrancyGuard {
-    function withdraw() public nonReentrant {
-        // 재진입이 차단됨
-    }
-}
-```
-
-**2. 정수 오버플로우/언더플로우**
-
-Solidity 0.8 이전에는 `uint256` 최대값에 1을 더하면 0이 됐다. 0에서 1을 빼면 최대값이 됐다.
-
-```solidity
-// 0.8 이전 (취약)
-uint256 balance = 0;
-balance -= 1; // → 2^256 - 1 (엄청난 숫자)
-
-// 0.8 이후 (자동 체크)
-uint256 balance = 0;
-balance -= 1; // → 트랜잭션 revert
-```
-
-Solidity 0.8+ 사용 또는 OpenZeppelin SafeMath 라이브러리로 해결된다.
-
-**3. 접근 제어 취약점**
-
-오너만 호출할 수 있어야 하는 함수에 `onlyOwner` 체크가 없는 경우.
-
-```solidity
-// 취약한 코드
-function setOwner(address newOwner) public {
-    owner = newOwner; // 누구나 호출 가능
-}
-
-// 안전한 코드
-function setOwner(address newOwner) public onlyOwner {
-    owner = newOwner;
-}
-```
-
-배포 직후 이런 함수가 있으면 공격자가 오너를 탈취한다. 실제 사례가 여러 번 있었다.
-
-**보안 감사 실습**: Ethernaut(ethernaut.openzeppelin.com)에서 취약한 컨트랙트를 직접 해킹해보면서 배울 수 있다. 게임 형식으로 18개 레벨이 있고, 각 레벨이 다른 취약점을 다룬다.
+- **Part 1**: 데이터 구조 (Merkle Tree, 블록 헤더 해부, 상태 트리)
+- **Part 2**: 합의 메커니즘 (PoS Epoch/Slot, Finality, The Merge, EIP와 하드포크)
+- **Part 3**: EVM (가상 머신 구조, ABI 인코딩, 옵코드, 가스 원리)
+- **Part 4**: 트랜잭션 여정 (P2P 네트워크, Mempool, MEV, 트랜잭션 실행)
+- **Part 5**: Layer 2 (확장성 트릴레마, Optimistic vs ZK Rollup, 브릿지와 시퀀서)
 
 ---
 
@@ -239,11 +107,8 @@ function setOwner(address newOwner) public onlyOwner {
 
 개념을 읽는 것과 직접 컨트랙트를 짜고 배포해보는 것의 차이는 크다. 읽기만 해선 이해한 것 같지만, 막상 코드를 쓰면 안다고 생각했던 것들이 막힌다. 그 막히는 지점이 진짜 학습이다.
 
-다음 단계는 간단해도 좋으니 **자신의 아이디어로 하나의 완성된 프로젝트**를 만들어보는 것이다.
+이 시리즈가 "쓸 수 있는" 단계였다면, 다음 시리즈는 "이해하는" 단계다.
 
-- 투표 시스템 — 특정 주소만 참여 가능한 온체인 투표
-- NFT 마켓플레이스 — ERC-721 토큰을 사고팔 수 있는 컨트랙트
-- 간단한 DAO — 토큰 기반 제안/투표/실행
-- 단순 게임 — 스마트 컨트랙트로 규칙이 강제되는 게임
+Ethers.js로 컨트랙트를 호출할 때 실제로 어떤 바이트가 날아가는지, MetaMask에서 전송을 눌렀을 때 내 트랜잭션이 어디서 대기하다 어떻게 블록에 담기는지, 이더리움이 12초마다 어떻게 합의를 이루는지 — 이런 걸 알고 나면 막혔던 디버깅이 풀리고, 코드가 달리 보인다.
 
-아이디어보다 만드는 게 중요하다. 시작하자.
+**이더리움 인터널 시리즈**에서 이어서 만나자.

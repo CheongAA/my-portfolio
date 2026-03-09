@@ -1,0 +1,127 @@
+---
+title: "Mempool — 트랜잭션 대기열의 실제 구조"
+date: "2026-03-21"
+description: "내 트랜잭션이 네트워크에 전파된 후 블록에 들어가기 전까지 어디에 있는가. Mempool의 구조, Pending과 Queued의 차이, nonce gap이 생기면 어떻게 되는지를 다뤘다."
+category: "블록체인"
+series: "이더리움 인터널"
+seriesOrder: 13
+---
+
+MetaMask에서 "전송"을 누른 직후, 트랜잭션은 "Pending" 상태가 된다.
+
+이 대기 상태는 정확히 어디서 어떻게 관리될까? 트랜잭션은 왜 가끔 몇 시간씩 stuck 되는 걸까?
+
+---
+
+## Mempool이란
+
+**Mempool(Memory Pool)**은 아직 블록에 포함되지 않은 트랜잭션들의 임시 저장소다. 각 노드가 자체적으로 관리한다.
+
+중요한 포인트: **전 세계에 하나의 글로벌 mempool은 없다.**
+
+각 노드는 자신이 연결된 피어들로부터 트랜잭션을 받아서 자신만의 mempool을 유지한다. 네트워크 지연 때문에 노드마다 mempool의 내용이 미묘하게 다를 수 있다.
+
+어떤 노드의 mempool에는 내 트랜잭션이 있지만 다른 노드엔 아직 없는 시간 차이가 생긴다. 이게 블록 빌더가 특정 트랜잭션을 안 보는 것처럼 느껴지는 이유 중 하나다.
+
+---
+
+## Mempool의 두 공간: Pending과 Queued
+
+이더리움 mempool에서 트랜잭션은 두 상태로 분류된다.
+
+### Pending
+즉시 실행 가능한 트랜잭션. 발신자의 현재 nonce에 맞는 트랜잭션.
+
+내 주소의 온체인 nonce가 42라면, nonce 42인 트랜잭션이 Pending이다.
+
+### Queued
+아직 실행 가능하지 않은 트랜잭션. Nonce에 빈 곳이 있어서 기다리는 중.
+
+nonce 44를 먼저 보내버리면, nonce 43이 오기 전까지 44는 Queued 상태다.
+
+```
+온체인 nonce: 42
+Pending:  nonce 42  ← 바로 실행 가능
+Queued:   nonce 44  ← nonce 43이 없어서 대기
+```
+
+---
+
+## Nonce: 트랜잭션 순서를 보장하는 메커니즘
+
+Nonce는 EOA 계정이 보낸 트랜잭션의 카운터다. 0부터 시작해서 트랜잭션을 보낼 때마다 1씩 증가한다.
+
+EVM은 nonce를 순서대로만 처리한다. 현재 온체인 nonce가 42라면, 다음에 처리할 수 있는 트랜잭션은 nonce 42만이다.
+
+이 구조가 중요한 이유:
+
+**재생 공격(Replay Attack) 방지**: 같은 서명된 트랜잭션을 두 번 제출해도, 첫 번째가 처리되면 nonce가 올라가서 두 번째는 "이미 쓴 nonce"로 거부된다.
+
+**순서 보장**: 내가 두 개의 트랜잭션을 보낼 때 A가 먼저, B가 나중에 실행되길 원하면 A에 nonce N, B에 nonce N+1을 붙이면 된다.
+
+---
+
+## Nonce Gap: 트랜잭션이 stuck 되는 이유
+
+흔한 문제다. nonce 43을 보내야 하는데 실수로 nonce 45를 먼저 보낸 경우:
+
+```
+온체인 nonce: 43
+mempool:
+  Queued: nonce 45  ← 영원히 대기
+```
+
+nonce 43이 처리되지 않으면 45는 절대 실행되지 않는다. 이게 **nonce gap**이다.
+
+해결 방법: nonce 43짜리 트랜잭션을 보내면 된다. 아무 내용이나 (자기 자신에게 0 ETH 전송도 가능). 이게 처리되면 연쇄적으로 이후 nonce들이 실행될 수 있다.
+
+---
+
+## Mempool 용량 제한과 가스 가격 경쟁
+
+각 노드의 mempool은 무한정 트랜잭션을 받지 않는다. Geth 기준 기본 설정은 약 5,000개.
+
+mempool이 꽉 찼을 때 새 트랜잭션이 들어오면, **가장 낮은 가스 가격의 트랜잭션이 밀려난다.** 밀려난 트랜잭션은 그 노드의 mempool에서 사라진다.
+
+이게 수수료 경쟁의 실체다. 내 트랜잭션이 충분히 높은 priorityFee를 설정하지 않으면 mempool에서 쫓겨날 수 있다.
+
+---
+
+## 가스 가격을 올려서 트랜잭션을 교체하기
+
+Pending 상태의 트랜잭션을 더 높은 가스 가격으로 재전송할 수 있다. 같은 nonce에 더 높은 gasPrice로 새 트랜잭션을 보내면 된다.
+
+EIP-1559 이후 기준으로 maxFeePerGas와 maxPriorityFeePerGas 모두 기존보다 10% 이상 높아야 교체가 된다.
+
+```
+기존:  maxFeePerGas 20 Gwei, maxPriorityFeePerGas 1 Gwei
+교체:  maxFeePerGas 22 Gwei, maxPriorityFeePerGas 1.1 Gwei (10% 이상 상승)
+```
+
+MetaMask의 "Speed Up" 버튼이 내부적으로 이걸 하는 것이다.
+
+트랜잭션을 취소하고 싶다면: 같은 nonce에 자기 자신에게 0 ETH 전송하는 트랜잭션을 더 높은 가스로 보내면 된다.
+
+---
+
+## Mempool 들여다보기
+
+`eth_getTransactionByHash`로 특정 트랜잭션 상태를 확인할 수 있다. `blockNumber`가 null이면 아직 mempool에 있는 것이다.
+
+```bash
+curl https://mainnet.infura.io/v3/YOUR_KEY \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "eth_getTransactionByHash",
+    "params": ["0xYOUR_TX_HASH"],
+    "id": 1
+  }'
+```
+
+mempool 전체를 보고 싶다면 `txpool_content` (Geth 전용) RPC 메서드를 쓴다. 수천 개의 트랜잭션 목록이 pending/queued로 나뉘어 반환된다.
+
+---
+
+다음 편에서는 블록 생성 과정에서 벌어지는 MEV(최대 추출 가능 가치)를 다룬다. 검증자가 트랜잭션 순서를 조작해서 이익을 챙기는 구조, 샌드위치 공격의 원리, 그리고 Flashbots가 이 문제를 어떻게 다루는지 살펴본다.
