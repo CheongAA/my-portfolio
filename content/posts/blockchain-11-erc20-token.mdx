@@ -1,0 +1,363 @@
+---
+title: "ERC-20 토큰 만들기"
+date: "2026-03-09"
+description: "ERC-20 표준 인터페이스 분석, approve/transferFrom 패턴, OpenZeppelin으로 토큰 배포, 프론트에서 잔액 조회와 전송."
+category: "블록체인"
+series: "블록체인 입문"
+seriesOrder: 11
+---
+
+지난 편에서 wagmi로 Counter dApp UI를 만들었다. 이번엔 실제 토큰을 직접 만들어본다. 이더리움 위의 모든 토큰(USDC, WETH, UNI...)이 이 편에서 다루는 ERC-20 표준을 따른다.
+
+---
+
+## ERC-20 표준이 뭔가
+
+이더리움 위에 수만 개의 토큰이 있다. 이 토큰들이 제각각 다른 방식으로 동작하면 문제다. MetaMask가 각 토큰마다 다른 방식으로 잔액을 조회해야 하고, 거래소는 토큰마다 다른 전송 방법을 구현해야 한다.
+
+**ERC-20**은 이더리움 토큰이 반드시 구현해야 하는 표준 인터페이스다. ERC는 "Ethereum Request for Comments", 20은 제안 번호다.
+
+```solidity
+interface IERC20 {
+    // 발행된 총 토큰 수
+    function totalSupply() external view returns (uint256);
+
+    // 특정 주소의 잔액
+    function balanceOf(address account) external view returns (uint256);
+
+    // 직접 전송
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    // 다른 주소에게 특정 금액을 인출할 수 있는 권한 부여
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    // 승인된 금액 조회
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    // 승인 받은 주소가 대신 전송
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+
+    // 이벤트
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+```
+
+이 인터페이스만 구현하면 MetaMask, Uniswap, 거래소가 자동으로 인식한다.
+
+---
+
+## approve / transferFrom 패턴
+
+ERC-20에서 가장 중요하고 자주 쓰이는 패턴이다.
+
+**시나리오**: Uniswap에서 내 USDC를 팔고 ETH를 사고 싶다.
+
+내가 Uniswap에게 직접 USDC를 보내면 Uniswap은 받았는지 알 방법이 없다. 그래서 두 단계로 처리한다.
+
+```
+1. approve: 내가 Uniswap 컨트랙트에게 "내 잔액에서 최대 1000 USDC를 꺼내도 된다"고 승인
+2. Uniswap이 swap 함수 실행 → 내부적으로 transferFrom 호출 → 내 USDC를 가져가고 ETH를 줌
+```
+
+```solidity
+// 사용자가 직접 호출
+usdc.approve(uniswapAddress, 1000 * 10**6); // 1000 USDC 승인 (USDC는 소수점 6자리)
+
+// Uniswap 컨트랙트 내부에서 호출
+function swap(address tokenIn, uint256 amountIn) external {
+    // 사용자가 approve한 금액을 가져옴
+    IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+    // ... 스왑 로직
+}
+```
+
+DeFi를 쓸 때 항상 두 번 트랜잭션이 필요한 이유가 이것이다. 첫 번째가 approve, 두 번째가 실제 액션이다.
+
+---
+
+## OpenZeppelin으로 만들기
+
+ERC-20을 처음부터 구현하는 건 위험하다. 실수 하나가 취약점이 된다. **OpenZeppelin**이 수년간 검증된 구현체를 제공한다. 이걸 상속해서 쓰면 된다.
+
+```bash
+npm install @openzeppelin/contracts
+```
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+
+contract MyToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
+    constructor(address initialOwner)
+        ERC20("My Token", "MTK")          // 토큰 이름, 심볼
+        Ownable(initialOwner)
+        ERC20Permit("My Token")           // EIP-2612: gasless approve
+    {
+        // 초기 공급량: 배포자에게 1,000,000 토큰 발행
+        _mint(msg.sender, 1_000_000 * 10 ** decimals());
+        // decimals()는 기본 18 → 1 MTK = 10^18 최소 단위
+    }
+
+    // 오너만 추가 발행 가능
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+}
+```
+
+**확장 기능들**:
+- `ERC20Burnable`: `burn()` 함수 추가. 토큰을 영구 소각할 수 있다.
+- `ERC20Permit`: approve를 서명으로 처리해서 가스비 없이 승인 가능 (EIP-2612).
+- `Ownable`: `onlyOwner` modifier 제공. 관리자 기능 구현에 씀.
+
+---
+
+## decimals: 소수점 자리수
+
+`decimals()`는 토큰의 최소 단위를 정의한다. 기본값은 18이다.
+
+```
+1 MTK = 10^18 (최소 단위)
+0.5 MTK = 500000000000000000
+```
+
+ETH와 같은 단위를 쓰는 이유는 DeFi 프로토콜들이 이 단위를 가정하고 설계됐기 때문이다. USDC는 예외적으로 6자리(`decimals() = 6`)를 쓴다.
+
+**중요**: 컨트랙트 내부에서는 항상 최소 단위로 계산한다. "1 MTK를 전송"할 때는 `1000000000000000000`을 전달해야 한다.
+
+---
+
+## 배포 스크립트
+
+```javascript
+// scripts/deploy-token.js
+const hre = require("hardhat")
+
+async function main() {
+  const [deployer] = await hre.ethers.getSigners()
+  console.log("배포 계정:", deployer.address)
+
+  const MyToken = await hre.ethers.getContractFactory("MyToken")
+  const token = await MyToken.deploy(deployer.address) // initialOwner
+  await token.waitForDeployment()
+
+  const tokenAddress = await token.getAddress()
+  console.log("토큰 주소:", tokenAddress)
+
+  // 초기 상태 확인
+  const totalSupply = await token.totalSupply()
+  const decimals = await token.decimals()
+  console.log("총 발행량:", hre.ethers.formatUnits(totalSupply, decimals), "MTK")
+
+  // Etherscan 검증을 위해 constructor 인자 저장
+  console.log("\n검증 명령어:")
+  console.log(`npx hardhat verify --network sepolia ${tokenAddress} "${deployer.address}"`)
+}
+
+main().catch(console.error)
+```
+
+```bash
+npx hardhat run scripts/deploy-token.js --network sepolia
+```
+
+---
+
+## 토큰 전송 테스트
+
+```javascript
+// Hardhat 테스트로 동작 확인
+const { expect } = require("chai")
+const { ethers } = require("hardhat")
+
+describe("MyToken", function () {
+  async function deployFixture() {
+    const [owner, addr1, addr2] = await ethers.getSigners()
+    const MyToken = await ethers.getContractFactory("MyToken")
+    const token = await MyToken.deploy(owner.address)
+    return { token, owner, addr1, addr2 }
+  }
+
+  it("총 발행량이 맞아야 한다", async function () {
+    const { token } = await deployFixture()
+    const supply = await token.totalSupply()
+    expect(supply).to.equal(ethers.parseEther("1000000")) // 1,000,000 MTK
+  })
+
+  it("transfer가 잘 작동해야 한다", async function () {
+    const { token, owner, addr1 } = await deployFixture()
+    const amount = ethers.parseEther("100")
+
+    await token.transfer(addr1.address, amount)
+
+    expect(await token.balanceOf(addr1.address)).to.equal(amount)
+    expect(await token.balanceOf(owner.address)).to.equal(
+      ethers.parseEther("999900")
+    )
+  })
+
+  it("approve → transferFrom이 작동해야 한다", async function () {
+    const { token, owner, addr1, addr2 } = await deployFixture()
+    const amount = ethers.parseEther("50")
+
+    // owner가 addr1에게 50 MTK 인출 권한 부여
+    await token.approve(addr1.address, amount)
+    expect(await token.allowance(owner.address, addr1.address)).to.equal(amount)
+
+    // addr1이 owner의 토큰을 addr2로 전송
+    await token.connect(addr1).transferFrom(owner.address, addr2.address, amount)
+
+    expect(await token.balanceOf(addr2.address)).to.equal(amount)
+    expect(await token.allowance(owner.address, addr1.address)).to.equal(0) // 다 썼으면 0
+  })
+})
+```
+
+---
+
+## 프론트에서 잔액 조회 / 전송
+
+```jsx
+import { useState } from 'react'
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from 'wagmi'
+import { parseUnits, formatUnits } from 'viem'
+import MyTokenABI from './abi/MyToken.json'
+
+const TOKEN_ADDRESS = "0x배포된_토큰_주소"
+const DECIMALS = 18
+
+function TokenDashboard() {
+  const { address } = useAccount()
+  const [recipient, setRecipient] = useState("")
+  const [amount, setAmount] = useState("")
+
+  // 내 잔액 조회
+  const { data: balance, refetch: refetchBalance } = useReadContract({
+    address: TOKEN_ADDRESS,
+    abi: MyTokenABI.abi,
+    functionName: 'balanceOf',
+    args: [address],
+    query: { enabled: !!address }, // address가 없으면 실행 안 함
+  })
+
+  // 총 발행량
+  const { data: totalSupply } = useReadContract({
+    address: TOKEN_ADDRESS,
+    abi: MyTokenABI.abi,
+    functionName: 'totalSupply',
+  })
+
+  // 전송
+  const { writeContract, data: txHash, isPending } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
+
+  function handleTransfer() {
+    if (!recipient || !amount) return
+
+    writeContract({
+      address: TOKEN_ADDRESS,
+      abi: MyTokenABI.abi,
+      functionName: 'transfer',
+      args: [
+        recipient,
+        parseUnits(amount, DECIMALS), // "1.5" → 1500000000000000000n
+      ],
+    })
+  }
+
+  // 전송 완료 후 잔액 갱신
+  useEffect(() => {
+    if (isSuccess) {
+      refetchBalance()
+      setAmount("")
+      setRecipient("")
+    }
+  }, [isSuccess])
+
+  const formattedBalance = balance
+    ? parseFloat(formatUnits(balance, DECIMALS)).toFixed(4)
+    : "0"
+
+  const formattedSupply = totalSupply
+    ? Number(formatUnits(totalSupply, DECIMALS)).toLocaleString()
+    : "..."
+
+  return (
+    <div>
+      <div>
+        <h3>My Token (MTK)</h3>
+        <p>총 발행량: {formattedSupply} MTK</p>
+        <p>내 잔액: {formattedBalance} MTK</p>
+      </div>
+
+      <div>
+        <h4>토큰 전송</h4>
+        <input
+          value={recipient}
+          onChange={e => setRecipient(e.target.value)}
+          placeholder="받는 주소 (0x...)"
+        />
+        <input
+          type="number"
+          value={amount}
+          onChange={e => setAmount(e.target.value)}
+          placeholder="전송량 (MTK)"
+          min="0"
+        />
+        <button
+          onClick={handleTransfer}
+          disabled={isPending || isConfirming || !recipient || !amount}
+        >
+          {isPending ? '서명 대기...' : isConfirming ? '확인 중...' : '전송'}
+        </button>
+        {isSuccess && <p>✅ 전송 완료!</p>}
+      </div>
+    </div>
+  )
+}
+```
+
+---
+
+## MetaMask에서 토큰 추가하기
+
+배포 후 MetaMask에서 자동으로 보이지 않는다. 수동으로 추가해야 한다.
+
+1. MetaMask 열기 → 토큰 가져오기
+2. 컨트랙트 주소 입력 (배포 시 출력된 주소)
+3. 심볼(MTK)과 소수점(18) 자동 입력 확인
+4. 가져오기
+
+또는 프론트엔드에서 버튼으로 추가 유도:
+
+```javascript
+async function addTokenToMetaMask() {
+  await window.ethereum.request({
+    method: 'wallet_watchAsset',
+    params: {
+      type: 'ERC20',
+      options: {
+        address: TOKEN_ADDRESS,
+        symbol: 'MTK',
+        decimals: 18,
+        image: 'https://your-site.com/token-icon.png',
+      },
+    },
+  })
+}
+```
+
+---
+
+다음 편에서는 ERC-721(NFT) 컨트랙트를 만들고, IPFS에 메타데이터를 올려서 완성된 민팅 사이트를 만든다.

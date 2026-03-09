@@ -1,0 +1,249 @@
+---
+title: "이제 뭘 공부하면 될까?"
+date: "2026-03-09"
+description: "13편 시리즈 전체 요약, DeFi 핵심 개념, Layer 2의 작동 원리, 스마트 컨트랙트 보안 취약점 3가지, 추천 학습 자료."
+category: "블록체인"
+series: "블록체인 입문"
+seriesOrder: 13
+---
+
+지난 편에서 NFT 민팅 사이트를 직접 만들었다. 이것으로 이 시리즈의 마지막 실습이 끝났다. 이번 편에서는 13편 전체를 돌아보고, 다음 단계를 안내한다.
+
+---
+
+## 시리즈 전체 요약
+
+---
+
+### 1편 — 블록체인, 그냥 DB랑 뭐가 다른데?
+
+중앙화 DB는 한 주체가 관리한다. 블록체인은 수천 개의 노드가 동일한 장부를 들고 있다. 블록은 이전 블록의 해시를 포함해서 체인처럼 연결된다. 중간 블록을 바꾸면 이후 전체가 무효화된다. 이 불변성이 신뢰의 기반이다. 은행도 법원도 필요 없이, 수학으로 "이 기록은 변조되지 않았다"를 보장한다.
+
+### 2편 — 합의 알고리즘
+
+수만 개의 노드가 어떻게 "어떤 블록이 진짜인가"에 합의하나. PoW는 계산 경쟁으로 블록 생성권을 획득하고, 전기를 소비하게 해서 사기 비용을 높인다. PoS는 코인을 예치한 검증자가 블록을 생성하고, 위반하면 예치금을 잃는다. 둘 다 "정직하게 행동하는 게 경제적으로 유리하다"는 구조를 만든다. 이더리움은 2022년 PoW → PoS로 전환했다.
+
+### 3편 — 지갑, 주소, 개인키
+
+개인키(열쇠)로 공개키를 생성하고, 공개키를 해시해서 주소(자물쇠)를 만든다. 단방향 과정이라 주소에서 개인키를 역산할 수 없다. 지갑은 코인을 저장하는 게 아니라 개인키를 관리하는 소프트웨어다. 코인은 블록체인 장부에 있다. 시드 문구를 잃으면 영원히 복구 불가능하다.
+
+### 4편 — 이더리움 vs 비트코인
+
+비트코인은 UTXO 모델 기반의 송금 특화 블록체인. 스크립트가 단순하고 안전하다. 이더리움은 Account 모델에 EVM을 탑재해서 임의의 코드를 실행할 수 있는 플랫폼. 가스비는 연산량에 따라 내는 수수료로, 네트워크 스팸을 막는다. EVM이 오픈소스라서 Polygon, Arbitrum 같은 EVM 호환 체인이 많다.
+
+### 5편 — 스마트 컨트랙트
+
+조건이 충족되면 자동 실행되는 블록체인 위의 코드. 중개인 없이 계약이 집행된다. 한 번 배포하면 수정 불가능하다. 이게 신뢰의 근거이자 버그가 치명적인 이유다. 2016년 The DAO 해킹은 컨트랙트 취약점으로 6천만 달러가 탈취된 사건이었고, 이더리움 하드포크로 이어졌다.
+
+### 6편 — Solidity 기초
+
+변수 타입(`uint256`, `address`, `bool`), 함수 제어자(`public`/`private`/`view`/`pure`), 전역 변수(`msg.sender`, `msg.value`), 에러 처리(`require`/`revert`), 데이터 구조(`mapping`/`array`/`struct`), 이벤트, modifier. Remix IDE에서 카운터 컨트랙트를 직접 작성하고 실행했다.
+
+### 7편 — Hardhat
+
+스마트 컨트랙트 개발 프레임워크. 로컬 블록체인 실행(`npx hardhat node`), 컴파일(`npx hardhat compile`), 테스트(`npx hardhat test`), 배포 스크립트 작성, Sepolia 테스트넷 배포, Etherscan 소스코드 검증까지. `.env`로 민감한 정보를 관리하고 절대 git에 커밋하지 않는 것이 중요하다.
+
+### 8편 — Ethers.js로 지갑 연결
+
+`window.ethereum`은 MetaMask가 브라우저에 주입하는 지갑 인터페이스. `BrowserProvider`로 감싸면 Ethers.js가 사용할 수 있다. Provider(읽기)와 Signer(서명/쓰기)의 구분이 핵심. 계정 변경(`accountsChanged`)과 네트워크 변경(`chainChanged`) 이벤트를 구독해서 UI를 업데이트한다.
+
+### 9편 — 컨트랙트 함수 읽고 쓰기
+
+ABI는 컨트랙트의 설명서. 함수 이름, 인자, 반환값을 JSON으로 정의한다. `view`/`pure` 함수 읽기는 가스 없음 즉시 반환. 상태 변경 함수는 MetaMask 서명 → 트랜잭션 전파 → 블록 확인 순서로 진행. `tx.wait()`로 완료를 기다리고 `receipt.status`로 성공/실패를 확인한다. 이벤트는 `contract.on()`으로 구독한다.
+
+### 10편 — wagmi
+
+이더리움 React 훅 라이브러리. `useAccount`(연결 상태), `useConnect`/`useDisconnect`(연결 관리), `useReadContract`(읽기), `useWriteContract` + `useWaitForTransactionReceipt`(쓰기). Ethers.js 직접 호출에 비해 보일러플레이트가 크게 줄고, 로딩/에러 상태를 자동으로 관리한다.
+
+### 11편 — ERC-20 토큰
+
+토큰 표준 인터페이스. `transfer`, `approve`, `transferFrom`이 핵심. approve/transferFrom 패턴은 DeFi 전체에서 쓰인다. OpenZeppelin 상속으로 검증된 구현체를 재사용할 수 있다. `decimals()`는 기본 18이고, 코드 내부에서는 항상 최소 단위(Wei급)로 계산한다.
+
+### 12편 — NFT(ERC-721)
+
+각 토큰이 고유한 `tokenId`를 가지는 대체 불가능한 토큰. `tokenURI`가 메타데이터 JSON URL을 반환한다. 이미지와 메타데이터는 IPFS(Pinata)에 올려서 탈중앙화된 영구 저장을 보장한다. `ERC721URIStorage`로 각 tokenId별 URI를 저장하고, wagmi로 민팅 UI를 완성했다.
+
+---
+
+## 여기서 더 나아가려면
+
+### DeFi (탈중앙화 금융)
+
+탈중앙화 금융은 스마트 컨트랙트로 은행, 거래소, 대출 서비스를 구현한다.
+
+**Uniswap (탈중앙화 거래소)**
+
+중앙화 거래소는 오더북으로 매수/매도를 매칭한다. Uniswap v2는 **AMM(Automated Market Maker)** 방식으로 동작한다. 두 토큰의 유동성 풀을 만들고, `x * y = k` 공식으로 가격을 결정한다.
+
+```
+ETH-USDC 풀: 100 ETH, 200,000 USDC
+k = 100 * 200,000 = 20,000,000
+
+ETH 1개를 팔면?
+  101 ETH * y = 20,000,000
+  y = 198,020 USDC
+  → 200,000 - 198,020 = 1,980 USDC를 받음
+```
+
+사람이 가격을 정하지 않는다. 수학이 가격을 정한다.
+
+**Aave (탈중앙화 대출)**
+
+ETH를 담보로 USDC를 빌린다. 담보 가치가 일정 비율 아래로 떨어지면 컨트랙트가 자동으로 담보를 청산한다. 은행 없이, 심사 없이, 코드가 대출을 집행한다.
+
+공부 방법: Uniswap v2 컨트랙트 소스를 읽어보기. 1000줄이 안 되는데, DeFi의 핵심 원리가 다 들어있다.
+
+---
+
+### Layer 2: 왜 필요하고 어떻게 작동하나
+
+이더리움 메인넷은 초당 처리 트랜잭션(TPS)이 약 15~30개다. 비자카드는 초당 수천 건을 처리한다. 이더리움이 대중화되려면 처리량을 늘려야 한다.
+
+Layer 2는 이더리움 위에서 트랜잭션을 처리하고, 결과만 이더리움에 제출하는 방식이다. 이더리움의 보안을 활용하면서 처리량을 대폭 늘린다.
+
+**Optimistic Rollup (Arbitrum, Optimism)**
+
+```
+트랜잭션들 → L2에서 실행 → 배치로 묶어서 L1에 제출
+"일단 올바르다고 가정" → 7일 이의 제기 기간
+이의 없으면 최종 확정
+```
+
+이름이 "Optimistic"인 이유: 트랜잭션이 올바를 거라고 낙관적으로 가정한다. 이의를 제기하면 사기 증명(Fraud Proof) 과정을 거친다. 7일 대기 기간이 필요하다.
+
+**ZK-Rollup (zkSync, Starknet, Polygon zkEVM)**
+
+```
+트랜잭션들 → L2에서 실행 → 수학적 증명(ZK Proof) 생성 → L1에 제출
+증명이 있으면 즉시 확정 (대기 기간 없음)
+```
+
+ZK Proof는 "이 계산이 올바르게 수행됐다"는 것을 수학적으로 증명한다. 계산 내용을 공개하지 않고도 증명할 수 있어서 프라이버시 기능도 추가할 수 있다. 다만 ZK Proof 생성이 computationally 무겁다.
+
+**dApp 개발자 관점에서의 차이**
+
+wagmi 설정에서 체인만 바꾸면 같은 코드가 L2에서도 동작한다.
+
+```javascript
+import { arbitrum, optimism, base } from 'wagmi/chains'
+
+const config = createConfig({
+  chains: [mainnet, arbitrum, optimism, base],
+  // ...
+})
+```
+
+가스비가 L1의 1/100 수준이라 UX가 훨씬 좋다. 실제 서비스 대부분이 L2에서 돌아간다.
+
+---
+
+### 스마트 컨트랙트 보안
+
+스마트 컨트랙트는 돈을 직접 다루고, 한 번 배포하면 수정이 안 된다. 취약점이 있으면 전액 탈취될 수 있다. 주요 취약점을 알아야 피할 수 있다.
+
+**1. 재진입 공격 (Reentrancy Attack)**
+
+2016년 The DAO 해킹의 원인. ETH 전송 중 악의적인 컨트랙트가 함수를 재귀 호출해서 잔액을 반복 탈취한다.
+
+```solidity
+// 취약한 코드
+function withdraw() public {
+    uint amount = balances[msg.sender];
+    // ETH 전송 → 악의적 컨트랙트의 fallback 실행 → withdraw 재호출
+    (bool success, ) = msg.sender.call{value: amount}("");
+    balances[msg.sender] = 0; // 잔액 초기화가 너무 늦음
+}
+
+// 안전한 코드: Checks-Effects-Interactions 패턴
+function withdraw() public {
+    uint amount = balances[msg.sender];
+    balances[msg.sender] = 0;  // 1. 먼저 상태 변경 (Effects)
+    (bool success, ) = msg.sender.call{value: amount}(""); // 2. 그 후 외부 호출 (Interactions)
+    require(success, "Transfer failed");
+}
+```
+
+또는 OpenZeppelin의 `ReentrancyGuard`를 사용:
+
+```solidity
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract Vault is ReentrancyGuard {
+    function withdraw() public nonReentrant {
+        // 재진입이 차단됨
+    }
+}
+```
+
+**2. 정수 오버플로우/언더플로우**
+
+Solidity 0.8 이전에는 `uint256` 최대값에 1을 더하면 0이 됐다. 0에서 1을 빼면 최대값이 됐다.
+
+```solidity
+// 0.8 이전 (취약)
+uint256 balance = 0;
+balance -= 1; // → 2^256 - 1 (엄청난 숫자)
+
+// 0.8 이후 (자동 체크)
+uint256 balance = 0;
+balance -= 1; // → 트랜잭션 revert
+```
+
+Solidity 0.8+ 사용 또는 OpenZeppelin SafeMath 라이브러리로 해결된다.
+
+**3. 접근 제어 취약점**
+
+오너만 호출할 수 있어야 하는 함수에 `onlyOwner` 체크가 없는 경우.
+
+```solidity
+// 취약한 코드
+function setOwner(address newOwner) public {
+    owner = newOwner; // 누구나 호출 가능
+}
+
+// 안전한 코드
+function setOwner(address newOwner) public onlyOwner {
+    owner = newOwner;
+}
+```
+
+배포 직후 이런 함수가 있으면 공격자가 오너를 탈취한다. 실제 사례가 여러 번 있었다.
+
+**보안 감사 실습**: Ethernaut(ethernaut.openzeppelin.com)에서 취약한 컨트랙트를 직접 해킹해보면서 배울 수 있다. 게임 형식으로 18개 레벨이 있고, 각 레벨이 다른 취약점을 다룬다.
+
+---
+
+## 추천 학습 자료
+
+**공식 문서 (가장 정확하고 최신)**
+- ethereum.org/developers — 이더리움 공식 개발자 문서. 한국어 지원.
+- docs.soliditylang.org — Solidity 언어 레퍼런스. 문법 궁금할 때마다 찾아보게 됨.
+- hardhat.org — Hardhat 공식 문서. 플러그인 목록도 유용.
+- docs.ethers.org — Ethers.js v6 API 문서.
+- wagmi.sh — wagmi 훅 API 레퍼런스.
+
+**실습 (직접 해보는 게 가장 빠름)**
+- **Crypto Zombies** (cryptozombies.io) — Solidity를 게임 캐릭터를 만들면서 배우는 인터랙티브 튜토리얼. 입문자에게 최고.
+- **Ethernaut** (ethernaut.openzeppelin.com) — 취약한 컨트랙트를 해킹해보면서 보안을 배운다. 실력 검증에 좋다.
+- **Speed Run Ethereum** (speedrunethereum.com) — 단계별 dApp 빌딩 챌린지. Scaffold-ETH 기반.
+
+**코드 레퍼런스**
+- **OpenZeppelin Contracts** — 검증된 컨트랙트 구현체. 어떻게 잘 짜는지 참고하기 좋다.
+- **Uniswap v2 Core** — DeFi AMM의 원형. 700줄 안에 탈중앙화 거래소가 구현돼 있다.
+
+---
+
+## 마치며
+
+처음 "블록체인이 DB랑 뭐가 다른지"부터 시작해서 NFT 민팅 사이트를 직접 테스트넷에 배포하는 것까지, 13편이었다.
+
+개념을 읽는 것과 직접 컨트랙트를 짜고 배포해보는 것의 차이는 크다. 읽기만 해선 이해한 것 같지만, 막상 코드를 쓰면 안다고 생각했던 것들이 막힌다. 그 막히는 지점이 진짜 학습이다.
+
+다음 단계는 간단해도 좋으니 **자신의 아이디어로 하나의 완성된 프로젝트**를 만들어보는 것이다.
+
+- 투표 시스템 — 특정 주소만 참여 가능한 온체인 투표
+- NFT 마켓플레이스 — ERC-721 토큰을 사고팔 수 있는 컨트랙트
+- 간단한 DAO — 토큰 기반 제안/투표/실행
+- 단순 게임 — 스마트 컨트랙트로 규칙이 강제되는 게임
+
+아이디어보다 만드는 게 중요하다. 시작하자.

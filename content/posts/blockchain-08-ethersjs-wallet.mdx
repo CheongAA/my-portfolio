@@ -1,0 +1,342 @@
+---
+title: "Ethers.js로 지갑 연결하기"
+date: "2026-03-09"
+description: "Provider/Signer 구조, window.ethereum이 뭔지, MetaMask 연결 요청, 잔액·네트워크 읽기, 이벤트 감지까지."
+category: "블록체인"
+series: "블록체인 입문"
+seriesOrder: 8
+---
+
+지난 편에서 컨트랙트를 Sepolia 테스트넷에 배포했다. 이제 프론트엔드에서 이 컨트랙트에 접근해야 한다. 브라우저와 이더리움 사이의 다리가 **Ethers.js**다.
+
+---
+
+## Ethers.js vs Web3.js vs viem
+
+이더리움과 통신하는 JavaScript 라이브러리는 세 가지가 주로 쓰인다.
+
+| | Ethers.js v6 | Web3.js v4 | viem |
+|---|---|---|---|
+| 번들 크기 | ~120kb | ~400kb | ~35kb |
+| TypeScript | 완전 지원 | 별도 타입 | 완전 지원 |
+| 사용 편의성 | 좋음 | 보통 | 좋음 |
+| 레퍼런스 | 많음 | 많음 | 증가 중 |
+| wagmi 기반 | 옵션 | — | 기본 |
+
+Web3.js는 역사가 길지만 번들 크기가 크고, 최근에는 사용이 줄고 있다. viem은 가장 최신이고 wagmi v2의 기반 라이브러리다. Ethers.js는 레퍼런스가 가장 많고 안정적이다.
+
+이 시리즈에서는 Ethers.js를 쓴다. 학습 자료가 풍부하고 직관적이다.
+
+```bash
+npm install ethers
+```
+
+---
+
+## Provider와 Signer 개념
+
+Ethers.js의 핵심 개념 두 가지다.
+
+**Provider**: 블록체인을 읽기 전용으로 연결하는 객체. 잔액 조회, 컨트랙트 읽기, 트랜잭션 조회 등. 서명(개인키)이 필요 없다.
+
+**Signer**: 개인키를 갖고 있어서 트랜잭션에 서명할 수 있는 객체. 컨트랙트 쓰기, ETH 전송 등.
+
+```
+Provider  →  블록체인 데이터 읽기 (무료, 서명 불필요)
+Signer    →  트랜잭션 보내기 (가스비, MetaMask 서명)
+```
+
+MetaMask 없이도 Provider만으로 블록체인 데이터를 읽을 수 있다. 공개 RPC 엔드포인트를 쓰면 된다.
+
+```javascript
+import { JsonRpcProvider } from 'ethers'
+
+// MetaMask 없이 읽기 전용 연결
+const provider = new JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY")
+const blockNumber = await provider.getBlockNumber()
+```
+
+하지만 트랜잭션을 보내려면 사용자의 MetaMask가 필요하다.
+
+---
+
+## window.ethereum이 뭔가
+
+MetaMask를 브라우저에 설치하면 모든 웹 페이지에 `window.ethereum`이 주입된다. 이건 **EIP-1193** 표준을 구현한 JavaScript 객체다.
+
+이 객체를 통해:
+- 사용자에게 지갑 연결 요청을 보낼 수 있다
+- 트랜잭션 서명을 요청할 수 있다
+- 현재 계정과 네트워크 정보를 읽을 수 있다
+
+MetaMask 외에도 Coinbase Wallet, Rainbow, Rabby 등 대부분의 브라우저 지갑이 같은 `window.ethereum` 인터페이스를 구현한다.
+
+```javascript
+// MetaMask 설치 여부 확인
+if (typeof window.ethereum === 'undefined') {
+  // 설치되지 않음
+  alert("MetaMask를 설치해주세요")
+  return
+}
+
+// MetaMask가 있으면 Ethers.js BrowserProvider로 감싸기
+import { BrowserProvider } from 'ethers'
+const provider = new BrowserProvider(window.ethereum)
+```
+
+`BrowserProvider`는 `window.ethereum`을 Ethers.js의 Provider 인터페이스로 감싸는 래퍼다.
+
+---
+
+## MetaMask 연결 요청
+
+처음 연결할 때는 사용자의 승인이 필요하다.
+
+```javascript
+import { BrowserProvider } from 'ethers'
+
+async function connectWallet() {
+  if (typeof window.ethereum === 'undefined') {
+    throw new Error("MetaMask를 설치해주세요")
+  }
+
+  const provider = new BrowserProvider(window.ethereum)
+
+  // eth_requestAccounts를 호출하면 MetaMask 팝업이 뜬다
+  // 사용자가 "연결"을 클릭하면 승인, "취소"하면 에러
+  try {
+    await provider.send("eth_requestAccounts", [])
+  } catch (err) {
+    if (err.code === 4001) {
+      // 사용자가 직접 거절한 경우
+      throw new Error("지갑 연결이 거절됐습니다")
+    }
+    throw err
+  }
+
+  // 연결 후 Signer 획득
+  const signer = await provider.getSigner()
+  const address = await signer.getAddress()
+
+  return { provider, signer, address }
+}
+```
+
+한 번 승인하면 같은 사이트에서는 다음부터 자동으로 연결된다. 이미 연결된 경우 팝업 없이 바로 계정 정보를 가져올 수 있다.
+
+이미 연결된 상태인지 확인하려면:
+
+```javascript
+// 승인 팝업 없이 현재 연결된 계정만 확인 (이미 연결된 경우만 반환)
+const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+if (accounts.length > 0) {
+  console.log("이미 연결됨:", accounts[0])
+}
+```
+
+---
+
+## 네트워크 정보와 잔액 읽기
+
+```javascript
+import { BrowserProvider, formatEther } from 'ethers'
+
+async function getWalletInfo() {
+  const provider = new BrowserProvider(window.ethereum)
+  const signer = await provider.getSigner()
+  const address = await signer.getAddress()
+
+  // 네트워크 정보
+  const network = await provider.getNetwork()
+  console.log("체인 ID:", network.chainId.toString())
+  // chainId: 1n (mainnet), 11155111n (Sepolia), 137n (Polygon)...
+
+  // ETH 잔액 (Wei 단위로 반환)
+  const balanceWei = await provider.getBalance(address)
+  const balanceEth = formatEther(balanceWei)
+  console.log("잔액:", balanceEth, "ETH")
+
+  // 다른 주소의 잔액도 읽을 수 있음
+  const someAddress = "0x742d35Cc6634C0532925a3b8D4C9A9F5e08a1234"
+  const otherBalance = await provider.getBalance(someAddress)
+
+  return { address, network, balanceEth }
+}
+```
+
+**올바른 네트워크인지 확인**
+
+사용자가 잘못된 네트워크(예: mainnet)에 연결해있으면 Sepolia 컨트랙트를 찾을 수 없다.
+
+```javascript
+const EXPECTED_CHAIN_ID = 11155111n // Sepolia
+
+async function checkNetwork(provider) {
+  const network = await provider.getNetwork()
+  if (network.chainId !== EXPECTED_CHAIN_ID) {
+    // MetaMask에 네트워크 전환 요청
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0xAA36A7' }], // Sepolia chain ID (hex)
+      })
+    } catch (err) {
+      throw new Error("Sepolia 네트워크로 전환해주세요")
+    }
+  }
+}
+```
+
+---
+
+## 계정 / 네트워크 변경 감지
+
+사용자가 MetaMask에서 계정을 바꾸거나 네트워크를 전환하면 앱이 이를 감지하고 UI를 업데이트해야 한다.
+
+```javascript
+// 계정 변경 감지
+window.ethereum.on('accountsChanged', (accounts) => {
+  if (accounts.length === 0) {
+    // 사용자가 MetaMask에서 모든 계정 연결을 해제함
+    console.log("지갑 연결 해제됨")
+    setAddress(null)
+  } else {
+    // 다른 계정으로 전환
+    console.log("계정 변경:", accounts[0])
+    setAddress(accounts[0])
+  }
+})
+
+// 네트워크 변경 감지
+window.ethereum.on('chainChanged', (chainId) => {
+  console.log("체인 변경:", parseInt(chainId, 16)) // hex → decimal
+  // 네트워크가 바뀌면 페이지를 리로드하는 게 가장 안전함
+  // 기존 provider/signer 객체가 무효화되기 때문
+  window.location.reload()
+})
+
+// React에서는 useEffect cleanup으로 이벤트 리스너를 제거해야 함
+useEffect(() => {
+  const handleAccountsChanged = (accounts) => {
+    setAddress(accounts[0] ?? null)
+  }
+
+  window.ethereum?.on('accountsChanged', handleAccountsChanged)
+
+  return () => {
+    window.ethereum?.removeListener('accountsChanged', handleAccountsChanged)
+  }
+}, [])
+```
+
+---
+
+## 실습: React 지갑 연결 컴포넌트
+
+```jsx
+import { useState, useEffect } from 'react'
+import { BrowserProvider, formatEther } from 'ethers'
+
+const SEPOLIA_CHAIN_ID = 11155111n
+
+export default function WalletConnect() {
+  const [address, setAddress] = useState(null)
+  const [balance, setBalance] = useState(null)
+  const [chainId, setChainId] = useState(null)
+  const [error, setError] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // 페이지 로드 시 이미 연결된 계정 복원
+  useEffect(() => {
+    async function restoreConnection() {
+      if (!window.ethereum) return
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+      if (accounts.length > 0) {
+        await loadWalletInfo()
+      }
+    }
+    restoreConnection()
+  }, [])
+
+  // 계정 변경 이벤트 구독
+  useEffect(() => {
+    if (!window.ethereum) return
+
+    const handleAccountsChanged = (accounts) => {
+      if (accounts.length === 0) {
+        setAddress(null)
+        setBalance(null)
+      } else {
+        loadWalletInfo()
+      }
+    }
+
+    window.ethereum.on('accountsChanged', handleAccountsChanged)
+    window.ethereum.on('chainChanged', () => window.location.reload())
+
+    return () => {
+      window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
+    }
+  }, [])
+
+  async function loadWalletInfo() {
+    const provider = new BrowserProvider(window.ethereum)
+    const signer = await provider.getSigner()
+    const addr = await signer.getAddress()
+    const network = await provider.getNetwork()
+    const bal = await provider.getBalance(addr)
+
+    setAddress(addr)
+    setChainId(network.chainId)
+    setBalance(parseFloat(formatEther(bal)).toFixed(4))
+  }
+
+  async function connect() {
+    if (!window.ethereum) {
+      setError("MetaMask를 설치해주세요")
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const provider = new BrowserProvider(window.ethereum)
+      await provider.send("eth_requestAccounts", [])
+      await loadWalletInfo()
+    } catch (err) {
+      if (err.code === 4001) {
+        setError("연결이 거절됐습니다")
+      } else {
+        setError("연결 실패: " + err.message)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (address) {
+    return (
+      <div>
+        <p>주소: {address.slice(0, 6)}...{address.slice(-4)}</p>
+        <p>잔액: {balance} ETH</p>
+        <p>체인 ID: {chainId?.toString()}</p>
+        {chainId !== SEPOLIA_CHAIN_ID && (
+          <p style={{ color: 'red' }}>⚠️ Sepolia 네트워크로 전환해주세요</p>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <button onClick={connect} disabled={isLoading}>
+        {isLoading ? "연결 중..." : "지갑 연결"}
+      </button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </div>
+  )
+}
+```
+
+---
+
+다음 편에서는 연결한 지갑으로 배포된 컨트랙트의 함수를 읽고 쓰는 방법을 다룬다.

@@ -1,0 +1,344 @@
+---
+title: "컨트랙트 함수 읽고 쓰기"
+date: "2026-03-09"
+description: "ABI가 뭔지, read vs write의 차이와 이유, 트랜잭션 상태 추적, 이벤트 구독, 에러 처리 패턴."
+category: "블록체인"
+series: "블록체인 입문"
+seriesOrder: 9
+---
+
+지난 편에서 MetaMask를 연결해서 주소와 잔액을 읽었다. 이제 배포한 컨트랙트의 함수를 실제로 호출해보자.
+
+---
+
+## ABI: 컨트랙트의 설명서
+
+컨트랙트와 통신하려면 **ABI(Application Binary Interface)**가 필요하다.
+
+컨트랙트는 EVM 바이트코드로 블록체인에 저장돼 있다. JavaScript에서 `counter.increment()`를 호출하면 Ethers.js는 ABI를 참조해서 "increment라는 함수가 어떤 인자를 받고, 어떤 방식으로 인코딩해야 하는지"를 알아낸다. 그리고 그에 맞는 바이트 데이터를 만들어 블록체인에 전송한다.
+
+Hardhat으로 컴파일하면 `artifacts/contracts/Counter.sol/Counter.json`에 ABI가 자동 생성된다.
+
+```json
+{
+  "abi": [
+    {
+      "name": "increment",
+      "type": "function",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "name": "count",
+      "type": "function",
+      "inputs": [],
+      "outputs": [{ "name": "", "internalType": "uint256", "type": "uint256" }],
+      "stateMutability": "view"
+    },
+    {
+      "name": "CountChanged",
+      "type": "event",
+      "inputs": [
+        { "name": "by", "type": "address", "indexed": true },
+        { "name": "oldCount", "type": "uint256", "indexed": false },
+        { "name": "newCount", "type": "uint256", "indexed": false }
+      ]
+    }
+  ]
+}
+```
+
+`stateMutability`가 핵심이다.
+- `"view"` / `"pure"` → 상태 변경 없음, 가스 없음
+- `"nonpayable"` → 상태 변경, 가스 필요
+- `"payable"` → 상태 변경 + ETH를 받을 수 있음, 가스 필요
+
+---
+
+## Contract 객체 만들기
+
+```javascript
+import { BrowserProvider, Contract } from 'ethers'
+import CounterABI from './artifacts/contracts/Counter.sol/Counter.json'
+
+const CONTRACT_ADDRESS = "0x배포된_주소"
+
+// 읽기 전용 (provider 사용)
+async function getReadContract() {
+  const provider = new BrowserProvider(window.ethereum)
+  return new Contract(CONTRACT_ADDRESS, CounterABI.abi, provider)
+}
+
+// 쓰기 가능 (signer 사용)
+async function getWriteContract() {
+  const provider = new BrowserProvider(window.ethereum)
+  const signer = await provider.getSigner()
+  return new Contract(CONTRACT_ADDRESS, CounterABI.abi, signer)
+}
+```
+
+Contract 객체를 생성할 때 주소, ABI, provider/signer를 넘긴다. provider를 넘기면 읽기만 되고, signer를 넘기면 트랜잭션도 보낼 수 있다.
+
+---
+
+## 읽기 (view 함수)
+
+```javascript
+async function readCount() {
+  const contract = await getReadContract()
+
+  // view 함수는 즉시 결과 반환
+  const count = await contract.count()
+
+  // Solidity uint256은 JavaScript BigInt로 반환됨
+  console.log("count:", count)          // 5n
+  console.log("타입:", typeof count)    // "bigint"
+  console.log("문자열:", count.toString()) // "5"
+
+  // 화면에 표시할 때
+  setCount(Number(count)) // 소수 없는 정수라면 Number 변환 가능
+  // 큰 숫자(토큰 잔액 등)는 toString() 사용 권장
+}
+```
+
+**BigInt 주의사항**: Solidity `uint256`은 JavaScript `number`(53비트 정밀도)로 표현할 수 없어서 `BigInt`로 반환된다. `count + 1`은 에러가 나고, `count + 1n`으로 써야 한다. 화면에 출력할 때는 `count.toString()`을 쓴다.
+
+---
+
+## 쓰기 (state-changing 함수)
+
+```javascript
+async function increment() {
+  const contract = await getWriteContract()
+
+  // 1. 트랜잭션 전송 (MetaMask 팝업이 뜸)
+  const tx = await contract.increment()
+  console.log("트랜잭션 해시:", tx.hash)
+  // 이 시점에서 트랜잭션은 전송됐지만 아직 블록에 포함되지 않음
+
+  // 2. 블록에 포함될 때까지 대기 (수 초~수십 초)
+  const receipt = await tx.wait()
+  console.log("완료! 블록:", receipt.blockNumber)
+  console.log("가스 사용:", receipt.gasUsed.toString())
+  console.log("상태:", receipt.status) // 1 = 성공, 0 = 실패
+
+  return receipt
+}
+```
+
+**트랜잭션 흐름 상세**:
+
+```
+1. contract.increment() 호출
+   → Ethers.js가 ABI로 calldata 인코딩
+   → MetaMask 팝업: 가스비 확인, 서명 요청
+   → 사용자 승인
+
+2. tx 객체 반환 (tx.hash 포함)
+   → 트랜잭션이 이더리움 mempool에 전파됨
+   → 아직 블록에 포함되지 않은 "pending" 상태
+
+3. tx.wait() 실행 중
+   → 검증자가 트랜잭션을 블록에 포함시킴
+   → 블록이 확정될 때까지 대기
+
+4. receipt 반환
+   → 트랜잭션 최종 확정
+   → receipt.status: 1 = 성공, 0 = 실패(revert)
+```
+
+`tx.hash`를 sepolia.etherscan.io에 붙여넣으면 트랜잭션 상태를 실시간으로 볼 수 있다.
+
+---
+
+## ETH를 함께 보내는 함수 (payable)
+
+```javascript
+async function depositETH() {
+  const contract = await getWriteContract()
+
+  // value 옵션으로 ETH를 함께 전송
+  const tx = await contract.deposit({
+    value: parseEther("0.01") // 0.01 ETH를 Wei로 변환
+  })
+
+  await tx.wait()
+  console.log("0.01 ETH 입금 완료")
+}
+```
+
+---
+
+## 이벤트 구독
+
+컨트랙트가 이벤트를 발생시키면 프론트엔드에서 실시간으로 감지할 수 있다.
+
+```javascript
+async function subscribeToEvents() {
+  const contract = await getReadContract()
+
+  // 실시간 이벤트 구독
+  contract.on("CountChanged", (by, oldCount, newCount, event) => {
+    console.log(`주소 ${by}가 count를 ${oldCount} → ${newCount}으로 변경`)
+    console.log("트랜잭션:", event.log.transactionHash)
+    setCount(Number(newCount))
+  })
+
+  // 구독 해제 (컴포넌트 unmount 시)
+  return () => {
+    contract.off("CountChanged")
+    // 또는 모든 이벤트 구독 해제
+    contract.removeAllListeners()
+  }
+}
+```
+
+**과거 이벤트 조회**:
+
+```javascript
+async function getPastEvents() {
+  const contract = await getReadContract()
+
+  // 특정 주소가 발생시킨 이벤트만 필터링 (indexed 파라미터)
+  const filter = contract.filters.CountChanged(myAddress)
+
+  // 최근 1000 블록의 이벤트 조회
+  const events = await contract.queryFilter(filter, -1000)
+
+  events.forEach(event => {
+    console.log({
+      by: event.args.by,
+      oldCount: event.args.oldCount.toString(),
+      newCount: event.args.newCount.toString(),
+      blockNumber: event.blockNumber,
+      txHash: event.transactionHash,
+    })
+  })
+}
+```
+
+---
+
+## 에러 처리
+
+트랜잭션은 다양한 이유로 실패한다. 제대로 처리하지 않으면 사용자 경험이 나빠진다.
+
+```javascript
+async function safeIncrement() {
+  try {
+    const contract = await getWriteContract()
+    const tx = await contract.increment()
+    const receipt = await tx.wait()
+
+    if (receipt.status === 0) {
+      throw new Error("트랜잭션이 실패했습니다 (revert)")
+    }
+
+    return receipt
+  } catch (error) {
+    // 사용자가 MetaMask에서 거절
+    if (error.code === 'ACTION_REJECTED') {
+      console.log("사용자가 트랜잭션을 거절했습니다")
+      return null
+    }
+
+    // 컨트랙트의 require가 실패 (revert)
+    if (error.reason) {
+      console.log("컨트랙트 에러:", error.reason) // require 메시지
+      // e.g., "Only owner", "Insufficient balance"
+      throw new Error(error.reason)
+    }
+
+    // 가스 부족
+    if (error.code === 'INSUFFICIENT_FUNDS') {
+      throw new Error("가스비가 부족합니다. ETH를 충전해주세요.")
+    }
+
+    // 가스 추정 실패 (트랜잭션 자체가 revert될 것이 확실한 경우)
+    if (error.code === 'CALL_EXCEPTION') {
+      // error.data에 revert 이유 담겨있음
+      throw new Error("트랜잭션이 실패할 것 같습니다: " + error.message)
+    }
+
+    throw error // 처리 못한 에러는 상위로 전달
+  }
+}
+```
+
+---
+
+## 트랜잭션 상태를 React 상태로 관리
+
+```jsx
+import { useState } from 'react'
+import { BrowserProvider, Contract, parseEther } from 'ethers'
+import CounterABI from './abi/Counter.json'
+
+const ADDRESS = "0x배포된_주소"
+
+export default function Counter() {
+  const [count, setCount] = useState(null)
+  const [status, setStatus] = useState('idle') // idle | pending | confirming | success | error
+  const [error, setError] = useState(null)
+
+  async function loadCount() {
+    const provider = new BrowserProvider(window.ethereum)
+    const contract = new Contract(ADDRESS, CounterABI.abi, provider)
+    const c = await contract.count()
+    setCount(Number(c))
+  }
+
+  async function handleIncrement() {
+    setStatus('pending')
+    setError(null)
+    try {
+      const provider = new BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
+      const contract = new Contract(ADDRESS, CounterABI.abi, signer)
+
+      setStatus('pending') // MetaMask 서명 대기 중
+      const tx = await contract.increment()
+
+      setStatus('confirming') // 블록 확인 대기 중
+      await tx.wait()
+
+      setStatus('success')
+      await loadCount() // count 새로고침
+    } catch (err) {
+      setStatus('error')
+      if (err.code === 'ACTION_REJECTED') {
+        setError("거절됐습니다")
+      } else {
+        setError(err.reason ?? err.message)
+      }
+    }
+  }
+
+  const statusMessages = {
+    idle: 'Increment',
+    pending: '서명 대기 중...',
+    confirming: '확인 중...',
+    success: '완료!',
+    error: '실패',
+  }
+
+  return (
+    <div>
+      <p>Count: {count ?? '로딩 중...'}</p>
+      <button onClick={loadCount}>새로고침</button>
+      <button
+        onClick={handleIncrement}
+        disabled={status === 'pending' || status === 'confirming'}
+      >
+        {statusMessages[status]}
+      </button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </div>
+  )
+}
+```
+
+---
+
+다음 편에서는 wagmi 라이브러리를 써서 이 로직을 훅으로 추상화하고 더 깔끔하게 관리한다.

@@ -1,0 +1,405 @@
+---
+title: "React + wagmi로 지갑 연결 UX 만들기"
+date: "2026-03-09"
+description: "wagmi가 뭔지, 설정 방법, useAccount/useConnect/useReadContract/useWriteContract 훅 사용법, 완성된 Counter dApp."
+category: "블록체인"
+series: "블록체인 입문"
+seriesOrder: 10
+---
+
+지난 편에서 Ethers.js로 컨트랙트를 직접 호출했다. 코드가 꽤 장황했다. Provider 만들고, getSigner 하고, Contract 만들고, 에러 처리하고... React 상태와도 연동해야 해서 boilerplate가 쌓인다.
+
+**wagmi**를 쓰면 이 모든 것을 React 훅으로 추상화할 수 있다. 코드가 훨씬 간결해지고, 로딩/에러 상태도 자동으로 관리된다.
+
+---
+
+## wagmi가 뭔가
+
+이더리움 앱 개발을 위한 React 훅 라이브러리다. 내부적으로 **viem**을 쓰고, 서버 상태 관리는 **TanStack Query**를 활용한다.
+
+wagmi가 처리해주는 것들:
+- 지갑 연결/해제
+- 계정 정보, 네트워크 정보
+- 컨트랙트 읽기/쓰기
+- 트랜잭션 상태 추적 (pending → confirming → success/error)
+- 자동 리페치 (블록 갱신 시 데이터 업데이트)
+- 여러 지갑 커넥터 지원 (MetaMask, WalletConnect, Coinbase...)
+
+```bash
+npm install wagmi viem @tanstack/react-query
+```
+
+---
+
+## 기본 설정
+
+앱 전체를 Provider로 감싸야 한다. 보통 `main.jsx` 또는 최상위 컴포넌트에 설정한다.
+
+```jsx
+// src/main.jsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { WagmiProvider, createConfig, http } from 'wagmi'
+import { mainnet, sepolia } from 'wagmi/chains'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
+import App from './App'
+
+const config = createConfig({
+  chains: [sepolia, mainnet], // 지원할 체인 목록
+  connectors: [
+    metaMask(),
+    coinbaseWallet({ appName: 'My dApp' }),
+    // walletConnect({ projectId: 'YOUR_PROJECT_ID' }),
+  ],
+  transports: {
+    [sepolia.id]: http(), // 기본 public RPC 사용
+    [mainnet.id]: http('https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY'),
+  },
+})
+
+const queryClient = new QueryClient()
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <WagmiProvider config={config}>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </WagmiProvider>
+)
+```
+
+`chains`에 여러 체인을 넣으면 사용자가 네트워크를 전환해도 대응할 수 있다. `transports`는 각 체인에 대한 RPC 설정이다. 운영 환경에서는 Alchemy나 Infura의 유료 키를 쓰는 게 안정적이다.
+
+---
+
+## 지갑 연결 / 해제
+
+```jsx
+import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
+import { metaMask } from 'wagmi/connectors'
+
+function WalletButton() {
+  const { address, isConnected, chain } = useAccount()
+  const { connect, isPending: isConnecting } = useConnect()
+  const { disconnect } = useDisconnect()
+  const { data: balance } = useBalance({ address })
+
+  if (isConnected) {
+    return (
+      <div>
+        <p>
+          {address.slice(0, 6)}...{address.slice(-4)}
+        </p>
+        <p>
+          {balance
+            ? `${parseFloat(balance.formatted).toFixed(4)} ${balance.symbol}`
+            : '로딩 중...'}
+        </p>
+        <p>네트워크: {chain?.name ?? '알 수 없음'}</p>
+        <button onClick={() => disconnect()}>연결 해제</button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => connect({ connector: metaMask() })}
+      disabled={isConnecting}
+    >
+      {isConnecting ? '연결 중...' : '지갑 연결'}
+    </button>
+  )
+}
+```
+
+`useAccount()`는 현재 연결된 계정 정보를 반환한다. `isConnected`가 `true`이면 `address`가 정의돼 있다.
+
+`useBalance()`는 ETH 잔액을 가져온다. `address`가 없으면 자동으로 skip된다.
+
+---
+
+## 여러 지갑 선택 UI
+
+```jsx
+import { useConnect } from 'wagmi'
+
+function ConnectWalletModal() {
+  const { connectors, connect, isPending } = useConnect()
+
+  return (
+    <div>
+      <h3>지갑 선택</h3>
+      {connectors.map((connector) => (
+        <button
+          key={connector.uid}
+          onClick={() => connect({ connector })}
+          disabled={isPending}
+        >
+          {connector.name}
+          {isPending ? ' (연결 중...)' : ''}
+        </button>
+      ))}
+    </div>
+  )
+}
+```
+
+`useConnect()`의 `connectors`는 설정에서 넣은 커넥터 목록이다. 각 커넥터의 `name`이 "MetaMask", "Coinbase Wallet" 등으로 표시된다.
+
+---
+
+## 네트워크 전환
+
+```jsx
+import { useAccount, useSwitchChain } from 'wagmi'
+import { sepolia } from 'wagmi/chains'
+
+function NetworkGuard({ children }) {
+  const { chain, isConnected } = useAccount()
+  const { switchChain, isPending } = useSwitchChain()
+
+  if (!isConnected) return children
+
+  if (chain?.id !== sepolia.id) {
+    return (
+      <div>
+        <p>⚠️ 잘못된 네트워크: {chain?.name}</p>
+        <button
+          onClick={() => switchChain({ chainId: sepolia.id })}
+          disabled={isPending}
+        >
+          {isPending ? '전환 중...' : 'Sepolia로 전환'}
+        </button>
+      </div>
+    )
+  }
+
+  return children
+}
+```
+
+---
+
+## 컨트랙트 읽기
+
+```jsx
+import { useReadContract, useReadContracts } from 'wagmi'
+import CounterABI from './abi/Counter.json'
+
+const CONTRACT = {
+  address: '0x배포된_주소',
+  abi: CounterABI.abi,
+}
+
+// 단일 함수 읽기
+function CountDisplay() {
+  const {
+    data: count,
+    isLoading,
+    isError,
+    refetch,
+  } = useReadContract({
+    ...CONTRACT,
+    functionName: 'count',
+  })
+
+  if (isLoading) return <span>로딩 중...</span>
+  if (isError) return <span>에러 발생</span>
+
+  return (
+    <div>
+      <span>Count: {count?.toString()}</span>
+      <button onClick={() => refetch()}>새로고침</button>
+    </div>
+  )
+}
+
+// 여러 함수 한 번에 읽기 (멀티콜)
+function ContractInfo() {
+  const { data } = useReadContracts({
+    contracts: [
+      { ...CONTRACT, functionName: 'count' },
+      { ...CONTRACT, functionName: 'owner' },
+      { ...CONTRACT, functionName: 'MAX_COUNT' },
+    ],
+  })
+
+  const [count, owner, maxCount] = data ?? []
+
+  return (
+    <div>
+      <p>Count: {count?.result?.toString()}</p>
+      <p>Owner: {owner?.result}</p>
+      <p>Max: {maxCount?.result?.toString()}</p>
+    </div>
+  )
+}
+```
+
+`useReadContracts`는 여러 함수를 동시에 읽어서 요청을 최소화한다. RPC 호출 횟수를 줄이는 데 유용하다.
+
+---
+
+## 컨트랙트 쓰기
+
+```jsx
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+
+function IncrementButton() {
+  const {
+    writeContract,
+    data: txHash,
+    isPending,     // MetaMask 서명 대기 중
+    isError: isWriteError,
+    error: writeError,
+    reset,
+  } = useWriteContract()
+
+  const {
+    isLoading: isConfirming, // 블록 확인 대기 중
+    isSuccess,
+    isError: isReceiptError,
+  } = useWaitForTransactionReceipt({ hash: txHash })
+
+  function handleIncrement() {
+    writeContract({
+      address: '0x배포된_주소',
+      abi: CounterABI.abi,
+      functionName: 'increment',
+    })
+  }
+
+  // 상태별 버튼 텍스트
+  const buttonText = () => {
+    if (isPending) return '서명 대기 중...'
+    if (isConfirming) return '확인 중...'
+    return 'Increment'
+  }
+
+  return (
+    <div>
+      <button
+        onClick={handleIncrement}
+        disabled={isPending || isConfirming}
+      >
+        {buttonText()}
+      </button>
+
+      {isSuccess && (
+        <p>
+          ✅ 완료!{' '}
+          <a
+            href={`https://sepolia.etherscan.io/tx/${txHash}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Etherscan에서 보기
+          </a>
+        </p>
+      )}
+
+      {(isWriteError || isReceiptError) && (
+        <div>
+          <p>❌ 실패: {writeError?.message}</p>
+          <button onClick={reset}>다시 시도</button>
+        </div>
+      )}
+    </div>
+  )
+}
+```
+
+`useWriteContract`와 `useWaitForTransactionReceipt`를 분리한 이유: 트랜잭션을 보낸 후 해시를 받고(`useWriteContract`), 그 해시로 블록 확인을 기다리는(`useWaitForTransactionReceipt`) 두 단계가 독립적이기 때문이다. 덕분에 각 단계의 로딩 상태를 분리해서 UI에 표시할 수 있다.
+
+---
+
+## 실습: 완성된 Counter dApp
+
+```jsx
+import {
+  useAccount, useConnect, useDisconnect,
+  useReadContract, useWriteContract, useWaitForTransactionReceipt,
+} from 'wagmi'
+import { metaMask } from 'wagmi/connectors'
+import { sepolia } from 'wagmi/chains'
+import CounterABI from './abi/Counter.json'
+
+const CONTRACT = {
+  address: '0x배포된_주소',
+  abi: CounterABI.abi,
+}
+
+export default function CounterApp() {
+  const { address, isConnected, chain } = useAccount()
+  const { connect } = useConnect()
+  const { disconnect } = useDisconnect()
+
+  const { data: count, refetch } = useReadContract({
+    ...CONTRACT,
+    functionName: 'count',
+  })
+
+  const { writeContract, data: txHash, isPending } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
+
+  // 트랜잭션 완료 후 count 갱신
+  useEffect(() => {
+    if (isSuccess) refetch()
+  }, [isSuccess])
+
+  if (!isConnected) {
+    return (
+      <button onClick={() => connect({ connector: metaMask() })}>
+        지갑 연결
+      </button>
+    )
+  }
+
+  if (chain?.id !== sepolia.id) {
+    return <p>Sepolia 네트워크로 전환해주세요</p>
+  }
+
+  return (
+    <div>
+      <p>{address.slice(0, 6)}...{address.slice(-4)}</p>
+      <h2>Count: {count?.toString() ?? '...'}</h2>
+
+      <button
+        onClick={() => writeContract({ ...CONTRACT, functionName: 'increment' })}
+        disabled={isPending || isConfirming}
+      >
+        {isPending ? '서명 대기...' : isConfirming ? '확인 중...' : 'Increment'}
+      </button>
+
+      <button
+        onClick={() => writeContract({ ...CONTRACT, functionName: 'decrement' })}
+        disabled={isPending || isConfirming || count === 0n}
+      >
+        Decrement
+      </button>
+
+      <button onClick={() => disconnect()}>연결 해제</button>
+    </div>
+  )
+}
+```
+
+---
+
+## Ethers.js vs wagmi 비교
+
+| | Ethers.js 직접 | wagmi |
+|---|---|---|
+| 보일러플레이트 | 많음 | 적음 |
+| 로딩/에러 상태 | 직접 관리 | 훅이 자동 관리 |
+| 캐싱/리페치 | 직접 구현 | TanStack Query 활용 |
+| 지갑 커넥터 | window.ethereum만 | 다양한 커넥터 지원 |
+| 학습 곡선 | 낮음 | 약간 높음 (설정) |
+| 유연성 | 높음 | 훅 구조에 종속 |
+
+실제 프로덕션 dApp에서는 wagmi가 표준에 가깝다. RainbowKit 같은 UI 라이브러리도 wagmi 기반이다.
+
+---
+
+다음 편에서는 실제 ERC-20 토큰을 OpenZeppelin으로 만들고 배포해본다.

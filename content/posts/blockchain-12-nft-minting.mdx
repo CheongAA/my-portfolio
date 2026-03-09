@@ -1,0 +1,464 @@
+---
+title: "NFT(ERC-721) 민팅 사이트 만들기"
+date: "2026-03-09"
+description: "ERC-20 vs ERC-721 차이, tokenURI와 메타데이터 구조, IPFS/Pinata로 이미지 올리기, 민팅 컨트랙트 배포, wagmi로 민팅 UI 완성."
+category: "블록체인"
+series: "블록체인 입문"
+seriesOrder: 12
+---
+
+지난 편에서 ERC-20 토큰을 만들었다. 이번엔 NFT다.
+
+"NFT 거품이 꺼졌다"는 말을 많이 하는데, 기술 자체는 변하지 않았다. NFT는 블록체인 위에서 고유한 디지털 자산의 소유권을 증명하는 방법이다. 이걸 이해하면 PFP 프로젝트를 넘어 게임 아이템, 디지털 신분증, 티켓팅 등 다양한 활용처가 보인다.
+
+---
+
+## ERC-20 vs ERC-721
+
+ERC-20 토큰은 **대체 가능(Fungible)**하다. 내가 가진 1 MTK와 네가 가진 1 MTK는 동일하다. 서로 바꿔도 아무 차이가 없다.
+
+ERC-721 토큰은 **대체 불가능(Non-Fungible)**하다. 각 토큰은 고유한 `tokenId`를 가지고, ID별로 다른 메타데이터(이미지, 속성 등)를 가질 수 있다.
+
+```
+ERC-20: balanceOf(address) → 수량 (대체 가능)
+ERC-721: ownerOf(tokenId) → 소유자 주소 (각 토큰이 고유)
+```
+
+---
+
+## ERC-721 핵심 인터페이스
+
+```solidity
+interface IERC721 {
+    // 특정 tokenId의 소유자
+    function ownerOf(uint256 tokenId) external view returns (address);
+
+    // 특정 주소가 보유한 NFT 수 (종류 무관 합계)
+    function balanceOf(address owner) external view returns (uint256);
+
+    // NFT 전송
+    function transferFrom(address from, address to, uint256 tokenId) external;
+
+    // 안전한 전송 (수신 컨트랙트가 ERC721 수신 가능한지 확인)
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;
+
+    // 다른 주소에게 특정 NFT 이전 권한 부여
+    function approve(address to, uint256 tokenId) external;
+
+    // 주소의 모든 NFT에 대한 권한 부여/해제
+    function setApprovalForAll(address operator, bool approved) external;
+
+    // 이벤트
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+}
+```
+
+그리고 메타데이터 확장:
+
+```solidity
+interface IERC721Metadata {
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+    function tokenURI(uint256 tokenId) external view returns (string memory);
+}
+```
+
+`tokenURI()`가 핵심이다. 각 NFT의 ID를 넘기면 그 NFT의 정보가 담긴 JSON URL을 반환한다.
+
+---
+
+## 메타데이터 구조
+
+`tokenURI`가 가리키는 JSON 파일의 형식은 OpenSea가 사실상 표준으로 정의해놨다.
+
+```json
+{
+  "name": "My NFT #1",
+  "description": "이 NFT에 대한 설명",
+  "image": "ipfs://QmXxx.../image.png",
+  "external_url": "https://my-nft-site.com/nft/1",
+  "attributes": [
+    { "trait_type": "Background", "value": "Blue" },
+    { "trait_type": "Eyes", "value": "Sleepy" },
+    { "trait_type": "Rarity", "value": "Rare" },
+    { "trait_type": "Level", "value": 5, "display_type": "number" }
+  ]
+}
+```
+
+`image` 필드가 실제 이미지를 가리킨다. 일반 HTTPS URL을 써도 되지만, 서버가 내려가면 이미지가 사라진다. 그래서 **IPFS**를 쓴다.
+
+---
+
+## IPFS란
+
+IPFS(InterPlanetary File System)는 탈중앙화 파일 저장 시스템이다. 파일을 올리면 파일 내용을 해시한 **CID(Content Identifier)**를 받는다.
+
+```
+QmXxx... = 이 파일의 내용을 해시한 고유 주소
+```
+
+특징:
+- 내용이 바뀌면 CID가 달라진다 → 조작 불가
+- 여러 노드가 파일을 복제해서 저장 → 중앙 서버 없음
+- 파일이 핀(pin)되지 않으면 사라질 수 있다 → 유지를 위해 핀닝 서비스 필요
+
+**Pinata**는 IPFS 파일을 영구적으로 핀닝해주는 서비스다. 무료 플랜으로 충분히 테스트할 수 있다.
+
+---
+
+## Pinata로 이미지 올리기
+
+1. **pinata.cloud** 가입 후 로그인
+2. "Upload" → "File" → 이미지 파일 선택
+3. 업로드 완료 후 CID 확인 (예: `QmXxx...abc`)
+4. `ipfs://QmXxx...abc` 가 이미지 URL이 됨
+
+메타데이터 JSON 파일 작성:
+
+```json
+{
+  "name": "My NFT #1",
+  "description": "첫 번째 NFT",
+  "image": "ipfs://QmXxx...abc",
+  "attributes": [
+    { "trait_type": "Color", "value": "Blue" }
+  ]
+}
+```
+
+이 JSON 파일도 Pinata에 올린다. JSON 파일의 CID가 `tokenURI`가 된다.
+
+`ipfs://QmYyy...xyz` → 이게 컨트랙트의 `tokenURI`에 저장됨.
+
+---
+
+## NFT 컨트랙트
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyNFT is ERC721URIStorage, ERC721Enumerable, Ownable {
+    uint256 private _tokenIdCounter;
+    uint256 public constant MINT_PRICE = 0.01 ether;
+    uint256 public constant MAX_SUPPLY = 10000;
+
+    event Minted(address indexed to, uint256 indexed tokenId, string tokenURI);
+
+    constructor(address initialOwner)
+        ERC721("My NFT Collection", "MNFT")
+        Ownable(initialOwner)
+    {}
+
+    function mint(string memory uri) public payable {
+        require(msg.value >= MINT_PRICE, "ETH not enough");
+        require(_tokenIdCounter < MAX_SUPPLY, "Sold out");
+
+        uint256 tokenId = _tokenIdCounter;
+        _tokenIdCounter++;
+
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, uri);
+
+        emit Minted(msg.sender, tokenId, uri);
+    }
+
+    // 오너가 무료로 민팅 (팀 할당분)
+    function ownerMint(address to, string memory uri) public onlyOwner {
+        uint256 tokenId = _tokenIdCounter;
+        _tokenIdCounter++;
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+    }
+
+    // 오너가 수익 출금
+    function withdraw() public onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "Nothing to withdraw");
+        payable(owner()).transfer(balance);
+    }
+
+    // 다음 민팅될 tokenId
+    function nextTokenId() public view returns (uint256) {
+        return _tokenIdCounter;
+    }
+
+    // ERC721URIStorage + ERC721Enumerable 충돌 해결 (오버라이드 필요)
+    function tokenURI(uint256 tokenId)
+        public view override(ERC721, ERC721URIStorage) returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public view override(ERC721URIStorage, ERC721Enumerable) returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
+    function _update(address to, uint256 tokenId, address auth)
+        internal override(ERC721, ERC721Enumerable) returns (address)
+    {
+        return super._update(to, tokenId, auth);
+    }
+
+    function _increaseBalance(address account, uint128 value)
+        internal override(ERC721, ERC721Enumerable)
+    {
+        super._increaseBalance(account, value);
+    }
+}
+```
+
+**ERC721Enumerable** 확장을 추가하면 `tokenOfOwnerByIndex()`, `tokenByIndex()` 같은 함수로 특정 주소가 가진 NFT 목록을 온체인에서 조회할 수 있다. 다만 가스 비용이 올라가서 컬렉션 규모에 따라 선택한다.
+
+---
+
+## 배포
+
+```javascript
+// scripts/deploy-nft.js
+const hre = require("hardhat")
+
+async function main() {
+  const [deployer] = await hre.ethers.getSigners()
+
+  const MyNFT = await hre.ethers.getContractFactory("MyNFT")
+  const nft = await MyNFT.deploy(deployer.address)
+  await nft.waitForDeployment()
+
+  const address = await nft.getAddress()
+  console.log("NFT 컨트랙트 주소:", address)
+  console.log("검증:", `npx hardhat verify --network sepolia ${address} "${deployer.address}"`)
+}
+
+main().catch(console.error)
+```
+
+---
+
+## 민팅 UI (wagmi)
+
+```jsx
+import { useState } from 'react'
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from 'wagmi'
+import { parseEther } from 'viem'
+import MyNFTABI from './abi/MyNFT.json'
+
+const NFT_ADDRESS = "0x배포된_NFT_주소"
+// Pinata에 올린 메타데이터 JSON의 IPFS URI
+const TOKEN_URI = "ipfs://QmYyy...xyz/metadata.json"
+
+const CONTRACT = {
+  address: NFT_ADDRESS,
+  abi: MyNFTABI.abi,
+}
+
+function MintSection() {
+  const { address, isConnected } = useAccount()
+
+  // 현재 민팅된 수
+  const { data: nextId } = useReadContract({
+    ...CONTRACT,
+    functionName: 'nextTokenId',
+  })
+
+  // 내가 가진 NFT 수
+  const { data: myBalance } = useReadContract({
+    ...CONTRACT,
+    functionName: 'balanceOf',
+    args: [address],
+    query: { enabled: !!address },
+  })
+
+  const { writeContract, data: txHash, isPending, isError, error } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash })
+
+  function handleMint() {
+    writeContract({
+      ...CONTRACT,
+      functionName: 'mint',
+      args: [TOKEN_URI],
+      value: parseEther("0.01"),
+    })
+  }
+
+  const isSoldOut = nextId !== undefined && nextId >= 10000n
+
+  return (
+    <div>
+      <div>
+        <p>민팅 현황: {nextId?.toString() ?? '...'} / 10,000</p>
+        {address && <p>내 보유: {myBalance?.toString() ?? '0'} NFT</p>}
+      </div>
+
+      <div>
+        <p>민팅 가격: 0.01 ETH</p>
+
+        {!isConnected ? (
+          <p>지갑을 연결해주세요</p>
+        ) : isSoldOut ? (
+          <p>완판됐습니다</p>
+        ) : (
+          <button
+            onClick={handleMint}
+            disabled={isPending || isConfirming}
+          >
+            {isPending && '서명 대기 중...'}
+            {isConfirming && '민팅 중...'}
+            {!isPending && !isConfirming && 'Mint NFT (0.01 ETH)'}
+          </button>
+        )}
+
+        {isSuccess && (
+          <div>
+            <p>🎉 민팅 완료!</p>
+            <a
+              href={`https://testnets.opensea.io/assets/sepolia/${NFT_ADDRESS}/${Number(nextId) - 1}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              OpenSea에서 보기
+            </a>
+          </div>
+        )}
+
+        {isError && (
+          <p>❌ 실패: {error?.shortMessage ?? error?.message}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+```
+
+---
+
+## 내가 가진 NFT 목록 보기
+
+```jsx
+function MyNFTGallery() {
+  const { address } = useAccount()
+
+  const { data: balance } = useReadContract({
+    ...CONTRACT,
+    functionName: 'balanceOf',
+    args: [address],
+    query: { enabled: !!address },
+  })
+
+  // ERC721Enumerable로 내 NFT tokenId 목록 가져오기
+  const tokenCount = balance ? Number(balance) : 0
+  const { data: tokenIds } = useReadContracts({
+    contracts: Array.from({ length: tokenCount }, (_, i) => ({
+      ...CONTRACT,
+      functionName: 'tokenOfOwnerByIndex',
+      args: [address, BigInt(i)],
+    })),
+    query: { enabled: tokenCount > 0 },
+  })
+
+  if (!tokenIds || tokenIds.length === 0) {
+    return <p>보유한 NFT가 없습니다</p>
+  }
+
+  return (
+    <div>
+      {tokenIds.map((item, i) => (
+        <NFTCard key={i} tokenId={item.result} />
+      ))}
+    </div>
+  )
+}
+
+function NFTCard({ tokenId }) {
+  const { data: uri } = useReadContract({
+    ...CONTRACT,
+    functionName: 'tokenURI',
+    args: [tokenId],
+    query: { enabled: tokenId !== undefined },
+  })
+
+  // ipfs:// → https://ipfs.io/ipfs/ 로 변환
+  const metadataUrl = uri?.replace('ipfs://', 'https://ipfs.io/ipfs/')
+
+  const [metadata, setMetadata] = useState(null)
+  useEffect(() => {
+    if (!metadataUrl) return
+    fetch(metadataUrl)
+      .then(r => r.json())
+      .then(setMetadata)
+  }, [metadataUrl])
+
+  return (
+    <div>
+      <p>#{tokenId?.toString()}</p>
+      {metadata && (
+        <>
+          <img
+            src={metadata.image?.replace('ipfs://', 'https://ipfs.io/ipfs/')}
+            alt={metadata.name}
+            width={200}
+          />
+          <p>{metadata.name}</p>
+        </>
+      )}
+    </div>
+  )
+}
+```
+
+---
+
+## OpenSea 테스트넷에서 확인
+
+민팅 완료 후 testnets.opensea.io에서 내 NFT를 확인할 수 있다.
+
+1. testnets.opensea.io 접속
+2. MetaMask 연결 (Sepolia 네트워크)
+3. 우측 상단 프로필 → "My Items"
+4. 민팅한 NFT 확인
+
+컨트랙트 Etherscan 검증을 완료했다면 컬렉션 페이지도 자동으로 생성된다.
+
+---
+
+## 전체 민팅 플로우 정리
+
+```
+1. 이미지 제작 (PNG, GIF, MP4 등)
+   ↓
+2. Pinata에 이미지 업로드 → image CID 획득
+   (ipfs://QmImage...)
+   ↓
+3. 메타데이터 JSON 작성 { name, image: ipfs://QmImage..., attributes }
+   ↓
+4. Pinata에 메타데이터 JSON 업로드 → metadata CID 획득
+   (ipfs://QmMeta...)
+   ↓
+5. Hardhat으로 컨트랙트 배포 (Sepolia)
+   ↓
+6. 프론트엔드: 사용자가 Mint 버튼 클릭
+   → writeContract({ functionName: 'mint', args: [ipfs://QmMeta...], value: 0.01 ETH })
+   → MetaMask 팝업 → 서명
+   ↓
+7. 트랜잭션 확인 완료 → NFT tokenId 발행됨
+   ↓
+8. OpenSea 테스트넷에서 내 NFT 확인
+```
+
+---
+
+다음 편에서는 이 시리즈 전체를 정리하고, 다음에 공부할 방향(DeFi, Layer 2, 보안)을 안내한다.
