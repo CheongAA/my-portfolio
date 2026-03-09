@@ -1,0 +1,178 @@
+---
+title: "RAG — AI에게 내 문서를 기억시키기"
+date: "2026-03-09"
+description: "컨텍스트 한계를 넘어 수천 페이지의 문서를 AI가 참조하게 만드는 방법. 임베딩, 벡터 DB, 검색 파이프라인."
+category: "AI"
+series: "AI 제대로 써먹기"
+seriesOrder: 11
+---
+
+AI에게 회사 내부 문서나 방대한 코드베이스에 대해 물어보고 싶을 때가 있다. 하지만 AI 컨텍스트 창은 크기가 제한되어 있다. 수천 페이지를 한 번에 넣을 수 없다.
+
+RAG가 이 문제를 해결한다.
+
+---
+
+## RAG가 뭔가
+
+**RAG(Retrieval-Augmented Generation)** — 검색 + 생성의 결합이다.
+
+문서 전체를 컨텍스트에 넣는 대신, **질문과 관련된 부분만 검색해서 AI에게 준다.** 1만 페이지 문서도 관련된 10페이지만 전달하면 된다.
+
+동작 순서:
+
+```
+[사용자 질문] → [관련 문서 검색] → [검색 결과 + 질문] → [AI 답변]
+```
+
+---
+
+## 핵심 개념: 임베딩과 벡터 DB
+
+**임베딩(Embedding):** 텍스트를 숫자 벡터로 변환한 것. "강아지"와 "개"는 의미가 비슷하니 벡터도 가깝다. "강아지"와 "자동차"는 멀다.
+
+**벡터 DB:** 임베딩을 저장하고 유사도 검색을 빠르게 해주는 DB. "이 질문과 가장 비슷한 문서 조각 5개를 줘"를 효율적으로 처리한다.
+
+RAG 파이프라인:
+
+```
+[문서 준비]
+문서 → 청크로 분할 → 임베딩 생성 → 벡터 DB에 저장
+
+[질문 처리]
+질문 → 임베딩 생성 → 벡터 DB에서 유사한 청크 검색 → AI에게 전달
+```
+
+---
+
+## 간단한 RAG 구현 (LangChain)
+
+```python
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from langchain.chains import RetrievalQA
+
+# 1. 문서 준비
+documents = [
+    Document(page_content=open("docs/api-guide.md").read(), metadata={"source": "api-guide"}),
+    Document(page_content=open("docs/architecture.md").read(), metadata={"source": "architecture"}),
+    # ...
+]
+
+# 2. 청크로 분할
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+chunks = splitter.split_documents(documents)
+
+# 3. 임베딩 + 벡터 DB 저장
+embeddings = OpenAIEmbeddings()
+vectorstore = FAISS.from_documents(chunks, embeddings)
+
+# 4. 검색 + 생성 체인 구성
+llm = ChatAnthropic(model="claude-opus-4-6")
+qa_chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    retriever=vectorstore.as_retriever(search_kwargs={"k": 5}),
+)
+
+# 5. 질문
+result = qa_chain.invoke("인증 API 엔드포인트는 어떻게 사용해?")
+print(result["result"])
+```
+
+---
+
+## 프로덕션 수준의 벡터 DB
+
+FAISS는 간단하지만 파일 기반이라 확장이 어렵다. 프로덕션에서는:
+
+**Supabase pgvector:**
+
+- PostgreSQL 기반. 이미 Supabase를 쓴다면 추가 설치 없음
+- SQL로 벡터 검색 가능
+
+```sql
+-- 테이블 생성
+CREATE TABLE documents (
+  id SERIAL PRIMARY KEY,
+  content TEXT,
+  embedding vector(1536),
+  metadata JSONB
+);
+
+-- 유사도 검색
+SELECT content, 1 - (embedding <=> query_embedding) AS similarity
+FROM documents
+ORDER BY embedding <=> query_embedding
+LIMIT 5;
+```
+
+**Pinecone:**
+
+- 완전 관리형 벡터 DB. 설정이 거의 없음
+- 대용량, 고성능이 필요할 때
+
+**Qdrant:**
+
+- 오픈소스. 자체 호스팅 가능
+- 필터링 기능이 강력
+
+---
+
+## RAG 품질을 높이는 방법
+
+기본 RAG를 만들면 답변이 종종 빗나간다. 품질을 높이는 주요 기법들:
+
+**청크 크기 조정:** 너무 작으면 컨텍스트가 부족하고, 너무 크면 노이즈가 많다. 문서 특성에 맞게 조정 (보통 500-1500 토큰).
+
+**재순위화(Reranking):** 벡터 유사도로 찾은 결과를 한 번 더 교차 인코더로 정렬. 관련성이 더 정확해진다.
+
+```python
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CrossEncoderReranker
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+
+model = HuggingFaceCrossEncoder(model_name="BAAI/bge-reranker-base")
+compressor = CrossEncoderReranker(model=model, top_n=3)
+retriever = ContextualCompressionRetriever(
+    base_compressor=compressor,
+    base_retriever=vectorstore.as_retriever(search_kwargs={"k": 10})
+)
+```
+
+**하이브리드 검색:** 벡터 검색(의미 기반) + 키워드 검색(BM25)을 결합. 정확한 용어 검색과 의미 기반 검색을 모두 커버.
+
+**메타데이터 필터링:** 검색 전에 문서 소스, 날짜, 카테고리로 범위를 좁힌다.
+
+```python
+retriever = vectorstore.as_retriever(
+    search_kwargs={
+        "k": 5,
+        "filter": {"source": "api-guide"}  # api-guide 문서만 검색
+    }
+)
+```
+
+---
+
+## 실습: 내 문서로 RAG 만들기
+
+1. 자주 참조하는 문서(README, API 문서, 내부 가이드 등) 수집
+2. 위 LangChain 예시에서 문서 경로만 바꿔서 실행
+3. 평소에 문서에서 찾기 어려웠던 내용을 질문해보기
+
+```python
+# 시작하기 가장 쉬운 버전
+pip install langchain langchain-anthropic langchain-openai faiss-cpu
+
+# 코드 실행 후
+result = qa_chain.invoke("배포 환경 변수 어떻게 설정해?")
+```
+
+직접 문서를 찾아보지 않아도 AI가 관련 내용을 찾아서 답해주면 성공이다.
+
+---
+
+다음 편에서는 마지막으로 Prompt Caching을 다룬다. 긴 시스템 프롬프트나 반복되는 문서를 캐싱해서 토큰 비용을 크게 줄이는 방법이다.

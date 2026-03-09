@@ -1,0 +1,193 @@
+---
+title: "Structured Output — AI 응답을 코드가 바로 쓸 수 있는 형태로"
+date: "2026-03-07"
+description: "JSON 스키마로 AI 응답 형태를 고정하면 파싱 없이 바로 쓸 수 있다. Function Calling과 무엇이 다른지도 정리한다."
+category: "AI"
+series: "AI 제대로 써먹기"
+seriesOrder: 6
+---
+
+AI가 응답할 때 항상 텍스트로만 받아야 할 필요는 없다. **형태를 미리 정해두면 AI가 그 형태 그대로 반환한다.**
+
+---
+
+## 문제: AI 응답을 파싱해야 할 때
+
+AI에게 블로그 포스트 메타데이터를 추출해달라고 하면:
+
+```
+이 글의 제목, 태그 3개, 요약 2줄을 추출해줘.
+
+[글 내용]
+```
+
+받은 응답:
+
+```
+제목: Next.js 15에서 서버 컴포넌트 쓰기
+태그: Next.js, React, 서버컴포넌트
+요약: Next.js 15의 서버 컴포넌트 개념을 설명합니다.
+      기존 클라이언트 컴포넌트와 차이점을 다룹니다.
+```
+
+이걸 코드에서 쓰려면 파싱해야 한다. "제목: " 뒤를 자르고, 태그를 쉼표로 분리하고... AI가 응답 형식을 매번 조금씩 다르게 쓰면 파싱이 깨진다.
+
+---
+
+## Structured Output: 스키마로 형태를 고정한다
+
+Structured Output을 쓰면 AI 응답을 JSON으로 고정할 수 있다.
+
+**OpenAI:**
+
+```python
+from openai import OpenAI
+from pydantic import BaseModel
+
+client = OpenAI()
+
+class BlogMetadata(BaseModel):
+    title: str
+    tags: list[str]
+    summary: str
+
+response = client.beta.chat.completions.parse(
+    model="gpt-4o-2024-08-06",
+    messages=[
+        {"role": "user", "content": f"이 글의 메타데이터를 추출해줘:\n\n{article_content}"}
+    ],
+    response_format=BlogMetadata,
+)
+
+metadata = response.choices[0].message.parsed
+print(metadata.title)   # "Next.js 15에서 서버 컴포넌트 쓰기"
+print(metadata.tags)    # ["Next.js", "React", "서버컴포넌트"]
+print(metadata.summary) # "Next.js 15의 서버 컴포넌트..."
+```
+
+Pydantic 모델이 그대로 스키마가 된다. 파싱 코드 없음.
+
+---
+
+## Claude에서 Structured Output
+
+Anthropic은 `bespoke-minimax-v1` 모델부터 Structured Output을 지원한다. 일반 모델에서는 system prompt + JSON mode로 비슷하게 구현할 수 있다.
+
+```python
+import anthropic
+import json
+
+client = anthropic.Anthropic()
+
+response = client.messages.create(
+    model="claude-opus-4-6",
+    max_tokens=1024,
+    system="""응답은 반드시 아래 JSON 형식으로만 반환해:
+{
+  "title": "string",
+  "tags": ["string"],
+  "summary": "string"
+}
+다른 텍스트 없이 JSON만.""",
+    messages=[
+        {"role": "user", "content": f"이 글의 메타데이터를 추출해줘:\n\n{article_content}"}
+    ]
+)
+
+metadata = json.loads(response.content[0].text)
+```
+
+또는 Anthropic의 공식 Structured Output 기능 (tool use 활용):
+
+```python
+tools = [{
+    "name": "extract_metadata",
+    "description": "블로그 글에서 메타데이터를 추출한다",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+            "summary": {"type": "string"}
+        },
+        "required": ["title", "tags", "summary"]
+    }
+}]
+
+response = client.messages.create(
+    model="claude-opus-4-6",
+    tools=tools,
+    tool_choice={"type": "tool", "name": "extract_metadata"},
+    messages=[{"role": "user", "content": f"메타데이터 추출:\n\n{article_content}"}]
+)
+
+metadata = response.content[0].input
+# {"title": "...", "tags": [...], "summary": "..."}
+```
+
+---
+
+## Function Calling vs Structured Output
+
+비슷해 보이지만 의도가 다르다.
+
+|           | Function Calling        | Structured Output     |
+| --------- | ----------------------- | --------------------- |
+| 목적      | AI가 외부 동작을 트리거 | AI 응답 형태를 구조화 |
+| 반환      | 함수 이름 + 인자        | 정해진 형태의 데이터  |
+| 주요 용도 | 챗봇 액션, 워크플로우   | 정보 추출, 분류, 파싱 |
+
+"사용자 메시지를 보고 어떤 API를 호출할지 결정해" → Function Calling
+"이 텍스트에서 구조화된 정보를 뽑아줘" → Structured Output
+
+---
+
+## 실용적인 사용 예시
+
+**코드 리뷰 결과 구조화:**
+
+```python
+class CodeReviewResult(BaseModel):
+    severity: Literal["low", "medium", "high"]
+    issues: list[str]
+    suggestions: list[str]
+    approved: bool
+```
+
+**에러 로그 분류:**
+
+```python
+class ErrorAnalysis(BaseModel):
+    error_type: str
+    root_cause: str
+    affected_components: list[str]
+    fix_priority: Literal["immediate", "soon", "backlog"]
+```
+
+**커밋 메시지 생성:**
+
+```python
+class CommitMessage(BaseModel):
+    type: Literal["feat", "fix", "docs", "refactor", "test", "chore"]
+    scope: str
+    subject: str
+    body: str | None
+```
+
+형태를 고정하면 AI 응답을 그대로 DB에 저장하거나, UI에 바인딩하거나, 다음 처리 단계로 넘길 수 있다.
+
+---
+
+## 실습
+
+지금 작업 중인 프로젝트에서 AI 응답을 파싱하고 있는 곳이 있다면:
+
+1. 현재 파싱 로직을 보고 원하는 데이터 형태를 Pydantic 모델로 정의한다
+2. Structured Output으로 교체한다
+3. 파싱 코드가 삭제되는지 확인한다
+
+파싱 코드가 없어진 만큼 버그가 줄어든다.
+
+---
+
+다음 편부터는 Part 4, AI 에이전트다. 지금까지 다룬 MCP, Function Calling이 에이전트의 재료가 되는 이유와, 에이전트가 일반 AI 응답과 어떻게 다른지부터 시작한다.

@@ -1,0 +1,253 @@
+---
+title: "훅과 플러그인 — AI 행동을 내가 커스터마이징하기"
+date: "2026-03-08"
+description: "Claude Code의 훅 시스템으로 AI 동작을 제어하는 방법. 위험한 명령 차단, 자동 알림, 커스텀 워크플로우."
+category: "AI"
+series: "AI 제대로 써먹기"
+seriesOrder: 10
+---
+
+에이전트를 쓰다 보면 "이 경우에는 실행 전에 확인을 받고 싶다"거나 "특정 작업 후에 자동으로 뭔가를 실행하고 싶다"는 상황이 생긴다. 훅이 그걸 해준다.
+
+---
+
+## 훅이 뭔가
+
+훅(Hook)은 AI가 특정 동작을 하기 전후에 실행되는 스크립트다. 이벤트에 반응해서 내가 원하는 코드를 끼워넣을 수 있다.
+
+Claude Code가 지원하는 훅 이벤트:
+
+| 이벤트             | 실행 시점                 |
+| ------------------ | ------------------------- |
+| `PreToolUse`       | AI가 도구를 사용하기 직전 |
+| `PostToolUse`      | AI가 도구를 사용한 직후   |
+| `UserPromptSubmit` | 사용자가 메시지를 보낼 때 |
+| `SessionStart`     | 새 대화 세션이 시작될 때  |
+| `SessionEnd`       | 세션이 끝날 때            |
+| `Stop`             | AI가 응답을 완료했을 때   |
+
+---
+
+## 설정 방법
+
+Claude Code의 훅은 `~/.claude/settings.json`에 설정한다.
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/check-dangerous-command.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/notify-file-changed.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 실전 예시 1: 위험한 git 명령 차단
+
+`git reset --hard`, `git push --force`, `rm -rf` 같은 명령을 AI가 실행하려 할 때 확인을 받는 훅.
+
+```bash
+#!/bin/bash
+# ~/.claude/hooks/check-dangerous-command.sh
+
+# Claude Code가 도구 입력을 환경변수로 전달
+TOOL_INPUT="$CLAUDE_TOOL_INPUT"
+
+# 위험한 패턴 검사
+DANGEROUS_PATTERNS=(
+  "git reset --hard"
+  "git push --force"
+  "git push -f"
+  "rm -rf"
+  "DROP TABLE"
+  "DELETE FROM.*WHERE"
+)
+
+for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+  if echo "$TOOL_INPUT" | grep -qi "$pattern"; then
+    echo "⚠️  위험한 명령 감지: $pattern"
+    echo "계속 실행하려면 y를 입력하세요:"
+    read -r answer
+    if [[ "$answer" != "y" ]]; then
+      exit 1  # exit 1 = 도구 실행 차단
+    fi
+  fi
+done
+
+exit 0  # exit 0 = 정상 실행 허용
+```
+
+`PreToolUse`에서 exit 1을 반환하면 Claude Code가 도구 실행을 중단한다.
+
+---
+
+## 실전 예시 2: 파일 변경 후 자동 포맷팅
+
+AI가 파일을 수정할 때마다 자동으로 lint/format을 실행하는 훅.
+
+```bash
+#!/bin/bash
+# ~/.claude/hooks/auto-format.sh
+
+TOOL_NAME="$CLAUDE_TOOL_NAME"
+TOOL_INPUT="$CLAUDE_TOOL_INPUT"
+
+# 파일 경로 추출 (Write 도구의 file_path)
+FILE_PATH=$(echo "$TOOL_INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('file_path',''))")
+
+if [[ -z "$FILE_PATH" ]]; then
+  exit 0
+fi
+
+# 파일 타입에 따라 포맷터 실행
+if [[ "$FILE_PATH" =~ \.(ts|tsx|js|jsx)$ ]]; then
+  npx prettier --write "$FILE_PATH" 2>/dev/null
+elif [[ "$FILE_PATH" =~ \.py$ ]]; then
+  black "$FILE_PATH" 2>/dev/null
+fi
+
+exit 0
+```
+
+`settings.json`에 등록:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "~/.claude/hooks/auto-format.sh" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 실전 예시 3: 세션 시작 시 컨텍스트 자동 주입
+
+새 세션을 열 때마다 현재 git 상태, 최근 에러 로그 등을 자동으로 컨텍스트에 추가.
+
+```bash
+#!/bin/bash
+# ~/.claude/hooks/session-context.sh
+
+echo "=== 현재 Git 상태 ==="
+git status --short 2>/dev/null
+
+echo ""
+echo "=== 최근 커밋 3개 ==="
+git log --oneline -3 2>/dev/null
+
+echo ""
+echo "=== 현재 브랜치 ==="
+git branch --show-current 2>/dev/null
+```
+
+`SessionStart`에 등록하면 새 대화를 시작할 때마다 이 정보가 자동으로 Claude Code의 컨텍스트에 포함된다. 매번 "지금 어떤 브랜치야?" 물어볼 필요가 없다.
+
+---
+
+## Claude Code 플러그인
+
+훅보다 더 구조적인 커스터마이징이 필요하면 플러그인으로 만들 수 있다.
+
+플러그인은 커스텀 슬래시 커맨드, 에이전트, 훅을 묶은 패키지다.
+
+```
+my-plugin/
+├── plugin.json          # 플러그인 메타데이터
+├── commands/
+│   └── review-pr.md     # /review-pr 커맨드 정의
+├── agents/
+│   └── security-checker.md  # 보안 검사 에이전트
+└── hooks/
+    └── settings.json    # 훅 설정
+```
+
+`plugin.json`:
+
+```json
+{
+  "name": "my-dev-toolkit",
+  "version": "1.0.0",
+  "description": "개발 워크플로우 자동화 도구 모음"
+}
+```
+
+커맨드 파일 (`commands/review-pr.md`):
+
+```markdown
+---
+description: PR을 리뷰하고 코멘트를 작성한다
+---
+
+PR URL: $ARGUMENTS
+
+1. PR의 변경된 파일 목록을 가져온다
+2. 각 파일의 변경사항을 분석한다
+3. 보안, 성능, 타입 안전성 관점에서 이슈를 찾는다
+4. GitHub에 리뷰 코멘트를 작성한다
+```
+
+설치:
+
+```bash
+claude plugin install ./my-plugin
+```
+
+이후 `/review-pr https://github.com/owner/repo/pull/123` 으로 바로 실행.
+
+---
+
+## ChatGPT Actions
+
+ChatGPT에도 비슷한 기능이 있다. Custom GPT를 만들 때 Actions를 설정하면 외부 API를 AI가 직접 호출할 수 있다.
+
+1. chatgpt.com → Explore GPTs → Create
+2. Configure 탭 → Actions → Create new action
+3. OpenAPI 스키마로 호출할 API 정의
+
+내 서비스의 API를 Actions로 등록하면, ChatGPT가 사용자 요청에 맞춰 그 API를 직접 호출한다. MCP와 개념은 같고 구현 방식이 다르다.
+
+---
+
+## 실습
+
+Claude Code를 쓴다면 지금 바로 만들 수 있는 훅:
+
+1. `~/.claude/hooks/` 디렉터리 생성
+2. 위 "위험한 git 명령 차단" 스크립트를 저장
+3. `~/.claude/settings.json`에 PreToolUse 훅으로 등록
+4. Claude Code에서 `git reset --hard`를 시도해보기
+
+AI가 위험한 명령을 실행하기 전에 확인을 받게 된다.
+
+---
+
+다음 편에서는 RAG — AI에게 내 문서를 기억시키는 방법을 다룬다. AI 컨텍스트 한계를 넘어서 수천 페이지의 문서를 참조하게 만드는 구조다.

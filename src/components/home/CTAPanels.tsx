@@ -46,7 +46,7 @@ function Panel({ href, title, subtitle, borderRight }: PanelProps) {
   return (
     <Link href={href} className="flex-1 min-w-0 block">
       <motion.div
-        className={`relative overflow-hidden w-full lg:min-h-[45vh] flex flex-col justify-end p-10 md:p-16 cursor-pointer${borderRight ? " border-b lg:border-r border-border" : ""}`}
+        className={`relative overflow-hidden w-full lg:min-h-[45vh] flex flex-col justify-end p-10 md:p-16 cursor-pointer${borderRight ? " border-b lg:border-b-0 lg:border-r border-border" : ""}`}
         variants={panelVariants}
         initial="rest"
         whileHover="hover"

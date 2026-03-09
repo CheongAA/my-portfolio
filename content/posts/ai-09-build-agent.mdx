@@ -1,0 +1,207 @@
+---
+title: "에이전트 직접 만들기 — LangChain, OpenAI, Claude SDK"
+date: "2026-03-08"
+description: "코드 리뷰 에이전트를 직접 만들어본다. LangChain, OpenAI Agents SDK, Claude Agent SDK 세 가지 방법으로."
+category: "AI"
+series: "AI 제대로 써먹기"
+seriesOrder: 9
+---
+
+이론은 충분하다. 이번 편은 실습이다. 간단한 코드 리뷰 에이전트를 세 가지 방법으로 만들어본다.
+
+에이전트의 목표: GitHub PR URL을 받아서 변경된 코드를 보고 리뷰 코멘트를 작성.
+
+---
+
+## 방법 1: LangChain
+
+LangChain은 에이전트 프레임워크 중 가장 오래되고 생태계가 넓다. 복잡한 에이전트를 빠르게 구성할 수 있다.
+
+```python
+from langchain_anthropic import ChatAnthropic
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain_core.tools import tool
+from langchain_core.prompts import ChatPromptTemplate
+import httpx
+
+llm = ChatAnthropic(model="claude-opus-4-6")
+
+@tool
+def get_pr_diff(pr_url: str) -> str:
+    """GitHub PR의 변경된 코드를 가져온다. pr_url은 GitHub PR URL."""
+    # URL에서 owner, repo, pr_number 파싱
+    parts = pr_url.rstrip("/").split("/")
+    owner, repo, pr_number = parts[-4], parts[-3], parts[-1]
+
+    response = httpx.get(
+        f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/files",
+        headers={"Authorization": f"Bearer {GITHUB_TOKEN}"}
+    )
+    files = response.json()
+    return "\n".join([
+        f"파일: {f['filename']}\n{f.get('patch', '변경사항 없음')}"
+        for f in files
+    ])
+
+@tool
+def post_review_comment(pr_url: str, comment: str) -> str:
+    """GitHub PR에 리뷰 코멘트를 작성한다."""
+    # PR에 코멘트 작성 로직
+    return f"코멘트 작성 완료: {comment[:50]}..."
+
+tools = [get_pr_diff, post_review_comment]
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "너는 시니어 개발자야. 코드 리뷰를 꼼꼼하게 한다."),
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}"),
+])
+
+agent = create_tool_calling_agent(llm, tools, prompt)
+executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+result = executor.invoke({
+    "input": "https://github.com/owner/repo/pull/123 이 PR 리뷰해줘"
+})
+print(result["output"])
+```
+
+---
+
+## 방법 2: OpenAI Agents SDK
+
+OpenAI가 2025년에 공개한 공식 에이전트 SDK. 간결하고 handoff(에이전트 간 전달)를 지원한다.
+
+```python
+from agents import Agent, Runner, function_tool
+
+@function_tool
+def get_pr_diff(pr_url: str) -> str:
+    """GitHub PR의 변경된 코드를 가져온다"""
+    # 위와 동일한 로직
+    ...
+
+@function_tool
+def post_review_comment(pr_url: str, comment: str) -> str:
+    """GitHub PR에 리뷰 코멘트를 작성한다"""
+    ...
+
+# 보안 전문 서브에이전트
+security_agent = Agent(
+    name="SecurityReviewer",
+    instructions="보안 취약점만 찾아서 보고해. XSS, SQL 인젝션, 인증 이슈 등.",
+    tools=[get_pr_diff],
+)
+
+# 메인 오케스트레이터
+code_review_agent = Agent(
+    name="CodeReviewer",
+    instructions="PR을 리뷰한다. 보안 이슈는 SecurityReviewer에게 넘겨.",
+    tools=[get_pr_diff, post_review_comment],
+    handoffs=[security_agent],
+)
+
+result = Runner.run_sync(
+    code_review_agent,
+    "https://github.com/owner/repo/pull/123 이 PR 리뷰해줘"
+)
+print(result.final_output)
+```
+
+`handoffs`로 서브에이전트를 등록하면, 메인 에이전트가 판단해서 작업을 넘긴다.
+
+---
+
+## 방법 3: Claude Agent SDK (Anthropic)
+
+Anthropic의 공식 에이전트 SDK. Claude 모델과 최적화되어 있고, 서브에이전트 구성이 명확하다.
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+def run_agent(task: str, tools: list, system: str = "") -> str:
+    messages = [{"role": "user", "content": task}]
+
+    while True:
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4096,
+            system=system,
+            tools=tools,
+            messages=messages,
+        )
+
+        # 도구 호출이 없으면 완료
+        if response.stop_reason == "end_turn":
+            return response.content[0].text
+
+        # 도구 호출 처리
+        tool_results = []
+        for block in response.content:
+            if block.type == "tool_use":
+                result = execute_tool(block.name, block.input)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result,
+                })
+
+        # 결과를 메시지에 추가하고 계속
+        messages.append({"role": "assistant", "content": response.content})
+        messages.append({"role": "user", "content": tool_results})
+
+tools = [
+    {
+        "name": "get_pr_diff",
+        "description": "GitHub PR의 변경된 코드를 가져온다",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pr_url": {"type": "string"}
+            },
+            "required": ["pr_url"]
+        }
+    }
+]
+
+result = run_agent(
+    "https://github.com/owner/repo/pull/123 이 PR 리뷰해줘",
+    tools=tools,
+    system="너는 시니어 개발자야. 코드 리뷰를 꼼꼼하게 한다."
+)
+```
+
+---
+
+## 세 방법 비교
+
+|              | LangChain      | OpenAI Agents SDK | Claude Agent SDK |
+| ------------ | -------------- | ----------------- | ---------------- |
+| 러닝 커브    | 높음           | 낮음              | 중간             |
+| 멀티에이전트 | LangGraph 필요 | handoffs 내장     | 직접 구현        |
+| 모델 지원    | 모든 모델      | OpenAI 최적화     | Claude 최적화    |
+| 생태계       | 가장 넓음      | 빠르게 성장 중    | Anthropic 공식   |
+
+빠르게 프로토타입 → OpenAI Agents SDK
+Claude 기반 프로덕션 → Claude Agent SDK
+복잡한 워크플로우, 멀티 모델 → LangChain/LangGraph
+
+---
+
+## 실습
+
+위 세 가지 중 하나를 선택해서 간단한 에이전트를 만들어보자.
+
+시작하기 쉬운 순서로 추천하면:
+
+1. **OpenAI Agents SDK** — 코드가 가장 간결
+2. **Claude Agent SDK** — while 루프 구조를 직접 이해하기 좋음
+3. **LangChain** — 더 복잡한 구조가 필요할 때
+
+에이전트를 직접 만들어보면 "도구 + 루프 + 판단"이 어떻게 맞물리는지 몸으로 이해된다.
+
+---
+
+다음 편부터는 Part 5, AI 행동을 더 깊이 제어하는 방법이다. Claude Code의 훅 시스템 — 위험한 명령 실행 전 검증, 특정 조건에서 자동 알림, AI 동작을 내가 원하는 대로 커스터마이징하는 방법을 다룬다.

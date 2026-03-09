@@ -1,0 +1,166 @@
+---
+title: "AI 세팅 고정 — 매번 설명 없애는 법"
+date: "2026-03-05"
+description: "System prompt, CLAUDE.md, Claude Projects, ChatGPT Projects. 한 번 세팅하면 이후 모든 대화에 자동 적용된다."
+category: "AI"
+series: "AI 제대로 써먹기"
+seriesOrder: 2
+---
+
+지난 편에서 반복 설명을 세팅으로 고정하라고 했다. 이번 편은 그 방법이다.
+
+도구마다 방법이 다르다. 순서대로 보고 자신이 쓰는 도구 기준으로 따라하면 된다.
+
+---
+
+## Claude Code — CLAUDE.md
+
+Claude Code를 쓴다면 이게 가장 직접적이다.
+
+프로젝트 루트에 `CLAUDE.md` 파일을 만든다. Claude Code는 대화를 시작할 때 이 파일을 자동으로 읽는다. 파일 안에 기술 스택, 코딩 규칙, 프로젝트 구조를 적어두면 매 대화에 자동으로 반영된다.
+
+```markdown
+# 프로젝트 규칙
+
+## 기술 스택
+- Next.js 15 App Router
+- TypeScript (strict mode)
+- Tailwind CSS v4
+
+## 코딩 규칙
+- 서버 컴포넌트 우선. 'use client'는 꼭 필요한 경우에만
+- 함수형 컴포넌트만 사용
+- 주석은 로직이 명확하지 않을 때만
+- 타입은 interface 우선, type은 유니온/인터섹션에만
+
+## 금지 패턴
+- any 타입 사용 금지
+- useEffect로 데이터 페칭 금지
+- 인라인 스타일 금지
+```
+
+이게 있으면 Claude Code가 처음부터 이 규칙 안에서 코드를 만든다. 설명 없이 바로 질문해도 된다.
+
+**관리 팁:**
+- git에 함께 커밋해서 팀 공유 가능
+- 프로젝트 규칙이 바뀌면 파일도 같이 수정
+- 너무 길게 쓰지 말 것 — 핵심 규칙만 간결하게
+
+---
+
+## Claude — Claude Projects
+
+Claude 웹 인터페이스(claude.ai)를 쓴다면 Claude Projects로 시스템 프롬프트를 설정할 수 있다.
+
+**설정 방법:**
+
+1. [claude.ai](https://claude.ai) 접속
+2. 왼쪽 사이드바 → **Projects** → **New Project**
+3. 프로젝트 이름 입력 후 생성
+4. 프로젝트 화면 우측 상단 **Project instructions** 클릭
+5. 텍스트 에디터에 규칙 입력 → 저장
+
+이후 이 프로젝트 안에서 여는 모든 대화에 자동 적용된다.
+
+**시스템 프롬프트 예시:**
+
+```
+너는 이 포트폴리오 프로젝트의 개발 파트너야.
+
+기술 스택: Next.js 15 App Router, TypeScript strict, Tailwind CSS v4
+배포: GitHub Pages (static export)
+
+코딩 규칙:
+- 서버 컴포넌트 우선
+- 함수형 컴포넌트만
+- 주석 최소화
+
+모르는 게 있으면 추측하지 말고 물어봐.
+```
+
+프로젝트마다 별도로 만들어두면 전환도 편하다. "포트폴리오", "회사 프로젝트", "사이드 프로젝트" 각각 하나씩.
+
+---
+
+## ChatGPT — Projects
+
+ChatGPT도 같은 기능을 Projects로 지원한다.
+
+**설정 방법:**
+
+1. [chatgpt.com](https://chatgpt.com) 접속
+2. 왼쪽 사이드바 → **Projects** → **New project**
+3. 프로젝트 이름 입력 후 생성
+4. 프로젝트 화면 우측 상단 **...** → **Project instructions** 클릭
+5. 텍스트 에디터에 규칙 입력 → 저장
+
+이후 이 프로젝트 안에서 여는 모든 대화에 자동 적용된다. Claude Projects와 사용 방식이 거의 동일하다.
+
+---
+
+## API를 쓴다면 — System prompt
+
+코드로 AI API를 직접 호출한다면 system 파라미터에 고정 맥락을 넣는다.
+
+**OpenAI:**
+```python
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+            "role": "system",
+            "content": "너는 Next.js 전문 개발자야. TypeScript strict mode를 기본으로 써."
+        },
+        {
+            "role": "user",
+            "content": "useEffect 없이 데이터 페칭하는 방법 알려줘"
+        }
+    ]
+)
+```
+
+**Anthropic:**
+```python
+response = client.messages.create(
+    model="claude-opus-4-6",
+    system="너는 Next.js 전문 개발자야. TypeScript strict mode를 기본으로 써.",
+    messages=[
+        {"role": "user", "content": "useEffect 없이 데이터 페칭하는 방법 알려줘"}
+    ]
+)
+```
+
+system 파라미터는 매 요청마다 전달되지만, 앱 코드에서 한 번만 정의해두면 된다.
+
+---
+
+## 세팅 내용에 넣으면 좋은 것들
+
+뭘 넣어야 할지 모르겠다면 이 항목들을 기준으로 시작한다.
+
+```
+1. 기술 스택 — 언어, 프레임워크, 주요 라이브러리
+2. 코딩 규칙 — 스타일, 패턴, 명명 규칙
+3. 금지 사항 — 쓰지 않는 패턴이나 라이브러리
+4. 프로젝트 구조 — 주요 디렉터리 역할
+5. AI의 역할 — "개발 파트너", "코드 리뷰어" 등
+6. 불확실할 때 행동 방침 — "추측하지 말고 물어봐"
+```
+
+처음엔 짧게 시작해도 된다. 쓰다 보면 뭐가 더 필요한지 보인다.
+
+---
+
+## 실습
+
+지금 자주 쓰는 AI 도구 기준으로 세팅을 하나 만들어보자.
+
+1. Claude Code → 프로젝트 루트에 `CLAUDE.md` 생성
+2. Claude 웹 → Claude Projects에서 새 프로젝트 + 시스템 프롬프트 설정
+3. ChatGPT → Projects에서 새 프로젝트 + 시스템 프롬프트 설정
+
+세팅 후 첫 메시지에 기술 스택 설명 없이 바로 질문해보기. 스택에 맞는 코드가 바로 나오면 성공이다.
+
+---
+
+다음 편부터는 Part 2다. MCP — AI에게 프롬프트가 아니라 실제 도구를 쥐여주는 방법. AI가 파일을 직접 읽고, 브라우저를 열고, DB를 조회하는 구조가 어떻게 작동하는지 다룬다.
