@@ -9,6 +9,18 @@ import { Badge } from "../ui/badge";
 
 const POSTS_PER_PAGE = 5;
 
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "...")[] = [1];
+  if (current > 3) pages.push("...");
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
+    pages.push(p);
+  }
+  if (current < total - 2) pages.push("...");
+  pages.push(total);
+  return pages;
+}
+
 interface BlogListProps {
   posts: PostMeta[];
 }
@@ -132,23 +144,33 @@ export default function BlogList({ posts }: BlogListProps) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-12 pt-8 border-t border-border">
+        <div className="flex items-center justify-between mt-12 pt-8 border-t border-border gap-2">
           <Button onClick={() => setPage((p) => p - 1)} disabled={page === 1}>
             ← {t("prev")}
           </Button>
 
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <Button
-                key={p}
-                data-active={p === page}
-                onClick={() => setPage(p)}
-                variant="secondary"
-                className="w-8 h-8 text-sm"
-              >
-                {p}
-              </Button>
-            ))}
+          {/* Mobile: current / total */}
+          <span className="text-sm text-secondary md:hidden">
+            {page} / {totalPages}
+          </span>
+
+          {/* Desktop: smart page numbers */}
+          <div className="hidden md:flex items-center gap-1">
+            {getPageNumbers(page, totalPages).map((item, i) =>
+              item === "..." ? (
+                <span key={`ellipsis-${i}`} className="w-8 text-center text-secondary text-sm">…</span>
+              ) : (
+                <Button
+                  key={item}
+                  data-active={item === page}
+                  onClick={() => setPage(item)}
+                  variant="secondary"
+                  className="w-8 h-8 text-sm"
+                >
+                  {item}
+                </Button>
+              )
+            )}
           </div>
 
           <Button
