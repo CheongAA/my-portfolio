@@ -16,13 +16,35 @@ export type PostMeta = {
 
 export type Post = PostMeta & { content: string };
 
+function getMdxFiles(dir: string): { slug: string; filePath: string }[] {
+  const results: { slug: string; filePath: string }[] = [];
+  if (!fs.existsSync(dir)) return results;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...getMdxFiles(fullPath));
+    } else if (entry.name.endsWith(".mdx")) {
+      results.push({
+        slug: entry.name.replace(/\.mdx$/, ""),
+        filePath: fullPath,
+      });
+    }
+  }
+  return results;
+}
+
+function findMdxFile(slug: string): string | null {
+  const files = getMdxFiles(POSTS_DIR);
+  const found = files.find((f) => f.slug === slug);
+  return found ? found.filePath : null;
+}
+
 export function getAllPosts(): PostMeta[] {
   if (!fs.existsSync(POSTS_DIR)) return [];
-  const files = fs.readdirSync(POSTS_DIR).filter((f) => f.endsWith(".mdx"));
-  return files
-    .map((file) => {
-      const slug = file.replace(/\.mdx$/, "");
-      const raw = fs.readFileSync(path.join(POSTS_DIR, file), "utf-8");
+  return getMdxFiles(POSTS_DIR)
+    .map(({ slug, filePath }) => {
+      const raw = fs.readFileSync(filePath, "utf-8");
       const { data } = matter(raw);
       return {
         slug,
@@ -38,8 +60,8 @@ export function getAllPosts(): PostMeta[] {
 }
 
 export function getPost(slug: string): Post | null {
-  const filePath = path.join(POSTS_DIR, `${slug}.mdx`);
-  if (!fs.existsSync(filePath)) return null;
+  const filePath = findMdxFile(slug);
+  if (!filePath) return null;
   const raw = fs.readFileSync(filePath, "utf-8");
   const { data, content } = matter(raw);
   return {
@@ -56,8 +78,5 @@ export function getPost(slug: string): Post | null {
 
 export function getAllSlugs(): string[] {
   if (!fs.existsSync(POSTS_DIR)) return [];
-  return fs
-    .readdirSync(POSTS_DIR)
-    .filter((f) => f.endsWith(".mdx"))
-    .map((f) => f.replace(/\.mdx$/, ""));
+  return getMdxFiles(POSTS_DIR).map(({ slug }) => slug);
 }

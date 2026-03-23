@@ -1,0 +1,169 @@
+---
+title: "Optimistic Rollup vs ZK Rollup — 두 접근법의 차이"
+date: "2026-03-12"
+description: "왜 Optimistic Rollup은 출금에 7일이 걸리고 ZK Rollup은 몇 분이면 될까. 두 접근법의 핵심 차이."
+category: "블록체인"
+series: "이더리움 인터널"
+seriesOrder: 17
+---
+
+16편에서 롤업의 기본 아이디어를 봤다. L2에서 처리하고 L1에 데이터와 증명을 제출한다.
+
+이번엔 그 "증명"을 어떻게 하는지가 핵심이다. 두 가지 방법이 있다.
+
+---
+
+## 문제: L1이 L2를 어떻게 신뢰하는가
+
+L2 운영자가 "이번 배치에서 Alice가 Bob에게 100 USDC를 보냈다"는 결과를 L1에 제출한다.
+
+L1 컨트랙트는 이걸 어떻게 검증할까?
+
+L1이 L2 트랜잭션을 하나씩 재실행하면 의미가 없다. L2 쓰는 이유가 없어진다.
+
+두 가지 다른 접근이 있다.
+
+---
+
+## Optimistic Rollup — 일단 믿고, 나중에 검증
+
+**"일단 맞다고 가정한다. 틀렸으면 이의를 제기해라."**
+
+Optimistic Rollup은 배치 결과를 L1에 제출할 때 유효성 증명을 함께 올리지 않는다. 그냥 올린다.
+
+대신 **이의 제기 기간(Challenge Period)**을 둔다. 보통 7일.
+
+이 기간 동안 누구나 "이 배치 결과가 틀렸다"고 주장할 수 있다. 이의를 제기하면 L1에서 해당 트랜잭션을 재실행해 검증한다. 이걸 **Fraud Proof(사기 증명)**라고 한다.
+
+```
+L2 운영자: 배치 제출 ("결과는 이거")
+7일 대기:
+  → 아무도 이의 제기 안 함 → 확정
+  → 누군가 Fraud Proof 제출 → L1이 검증
+    → 운영자가 틀렸으면: 배치 취소 + 운영자 슬래싱
+    → 이의 제기가 틀렸으면: 이의 제기자 슬래싱
+```
+
+이 구조가 **출금에 7일**이 걸리는 이유다.
+
+L2에서 이더리움 메인넷으로 자금을 출금하면 7일을 기다려야 한다. 이의 제기 기간이 끝나야 확정되기 때문이다.
+
+(단, 서드파티 브리지 서비스를 쓰면 유동성을 제공해 빠른 출금이 가능하다. 수수료 있음.)
+
+**Optimistic Rollup 대표 체인**: Arbitrum, Optimism (OP Mainnet), Base
+
+---
+
+## ZK Rollup — 수학적 증명과 함께 제출
+
+**"결과가 맞다는 수학적 증명을 함께 제출한다."**
+
+ZK Rollup은 배치를 처리할 때마다 **유효성 증명(Validity Proof)**을 생성해서 L1에 함께 제출한다.
+
+이 증명은 "이 입력들로 이 연산들을 수행하면 이 결과가 나온다"는 것을 수학적으로 보장한다. L1 컨트랙트는 증명만 검증하면 된다. 트랜잭션을 재실행할 필요가 없다.
+
+```
+L2 운영자: 배치 + Validity Proof 제출
+L1 컨트랙트: 증명 수학적 검증
+  → 유효 → 즉시 확정
+  → 무효 → 거부
+```
+
+이의 제기 기간이 없다. L1이 증명을 검증하는 데 몇 분~수십 분이면 된다. **출금이 빠른 이유**가 여기 있다.
+
+**ZK Rollup 대표 체인**: zkSync Era, StarkNet, Polygon zkEVM, Scroll
+
+---
+
+## ZK에서 ZK는 "Zero-Knowledge"
+
+ZK는 **Zero-Knowledge Proof(영지식 증명)**에서 왔다.
+
+원래 의미: 정보 자체를 공개하지 않고도 그 정보를 알고 있다는 것을 증명하는 암호학 기법.
+
+ZK Rollup에서 쓰이는 것은 이 성질 중 "유효성 증명" 부분이다. 모든 트랜잭션 세부 내용을 공개하지 않고도 "이 배치가 올바르게 실행됐다"는 것을 증명할 수 있다.
+
+Validity Proof를 만드는 방식에 따라 두 가지로 나뉜다:
+- **zkSNARK**: 증명이 작고 검증이 빠르지만, 신뢰할 수 있는 초기 설정(trusted setup)이 필요. zkSync, Polygon zkEVM에서 사용.
+- **zkSTARK**: 신뢰 설정 불필요, 양자 컴퓨팅에 안전. 증명이 더 크다. StarkNet에서 사용.
+
+---
+
+## 두 방식 비교
+
+| | Optimistic Rollup | ZK Rollup |
+|--|---|---|
+| 보안 방식 | Fraud Proof (사후 검증) | Validity Proof (사전 증명) |
+| 출금 대기 | ~7일 | 수십 분 |
+| EVM 호환성 | 높음 (EVM 동일) | 낮음 (ZK-EVM 구현 필요) |
+| 증명 생성 비용 | 없음 | 높음 (ZK 연산) |
+| 현재 성숙도 | 높음 (TVL 많음) | 빠르게 성숙 중 |
+
+### EVM 호환성 문제
+
+ZK Rollup의 가장 큰 기술적 과제가 EVM 호환성이다.
+
+ZK 회로로 EVM 옵코드를 전부 구현하기가 매우 어렵다. 일부 ZK Rollup은 EVM 대신 자체 가상 머신(Cairo VM for StarkNet)을 쓴다. 개발자가 기존 Solidity 코드를 그대로 사용하기 어렵다.
+
+ZK-EVM(EVM 호환 ZK 증명 시스템)은 이 문제를 해결하려는 시도다. Polygon zkEVM, zkSync Era, Scroll이 ZK-EVM을 구현했지만 완전한 EVM 동등성을 달성하는 것은 여전히 어렵다.
+
+Optimistic Rollup은 EVM을 그대로 실행하므로 기존 Solidity 코드와 도구(Hardhat, Foundry 등)를 그대로 쓸 수 있다.
+
+---
+
+## 주요 L2 포지셔닝
+
+**Arbitrum** (Optimistic)
+이더리움 L2 중 가장 많은 TVL. EVM 호환성이 높아 많은 DeFi 프로토콜이 배포돼 있다.
+
+**Optimism (OP Mainnet)** (Optimistic)
+Coinbase의 Base, Uniswap의 Unichain 등이 OP Stack을 기반으로 한다. "Superchain" 생태계를 구축 중.
+
+**Base** (Optimistic, OP Stack 기반)
+Coinbase가 운영. 가장 빠르게 성장하는 L2 중 하나.
+
+**zkSync Era** (ZK)
+ZK Rollup 중 가장 많은 TVL. Native Account Abstraction 지원.
+
+**StarkNet** (ZK)
+zkSTARK 기반. Cairo 언어를 사용해 EVM과 완전히 다른 스택.
+
+---
+
+## 이더리움의 방향: 롤업 중심 로드맵
+
+이더리움 공식 로드맵은 **"롤업 중심(Rollup-centric)"** 전략을 채택했다.
+
+L1 자체를 무제한으로 확장하지 않는다. 대신:
+- L1은 보안과 데이터 가용성 레이어로 최적화
+- 확장성은 L2 롤업이 담당
+- EIP-4844, Danksharding 등으로 L2가 L1에 데이터를 올리는 비용을 지속적으로 낮춤
+
+---
+
+## 시리즈를 마치며
+
+이더리움 인터널 시리즈가 여기서 끝났다.
+
+Part 1에서 데이터 구조(Merkle Tree, 블록 헤더, 상태 트리)부터 시작해서, 합의 메커니즘, EVM, 트랜잭션의 여정, 그리고 L2까지 — 이더리움의 동작 원리를 아래에서 위로 쌓아 올렸다.
+
+이 시리즈를 읽고 나면 스마트 컨트랙트를 작성할 때 왜 특정 패턴이 권장되는지, 트랜잭션이 실패할 때 무슨 일이 일어나는지, L2를 쓸 때 무엇을 고려해야 하는지 훨씬 잘 이해할 수 있다.
+
+---
+
+## 용어 정리
+
+**Optimistic Rollup**
+배치 결과를 일단 올리고, 이의 제기 기간 동안 Fraud Proof로 검증하는 L2 방식.
+
+**ZK Rollup**
+배치마다 수학적 유효성 증명(Validity Proof)을 생성해 L1에 함께 제출하는 L2 방식.
+
+**Fraud Proof**
+Optimistic Rollup에서 잘못된 상태 전이를 L1에서 증명하는 메커니즘.
+
+**Validity Proof**
+ZK Rollup에서 배치 실행이 올바름을 수학적으로 보장하는 증명.
+
+**ZK-EVM**
+EVM 실행을 ZK 증명으로 표현할 수 있도록 구현한 시스템. ZK Rollup의 EVM 호환성 핵심.

@@ -61,10 +61,6 @@ export default function RootLayout({
           href="https://db.onlinewebfonts.com/c/879269be836bf8d970d4ef4fb0e54f42?family=GT+America+Extended+Regular"
           rel="stylesheet"
         />
-        <meta
-          name="google-site-verification"
-          content="JexWRUoN3jeag7CuuYEiiAidIVkN-FoMgXElNoA9m2I"
-        />
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
